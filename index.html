@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dự Đoán Bingo18 Real-time</title>
+<style>
+:root{--primary:#d32f2f;--primary-hover:#b71c1c;--bg:#f4f7f6;--card:#fff;--ink:#2c3e50;--border:#e0e0e0;--gold:#b78103;--blue:#1565c0;--green:#2e7d32}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);margin:0;padding:20px;color:var(--ink)}
+.container{max-width:1040px;margin:0 auto;background:var(--card);padding:30px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+h1{text-align:center;color:var(--primary);margin:0 0 6px;font-size:2.1rem}
+.subtitle{text-align:center;color:#7f8c8d;font-size:.95rem;margin-bottom:20px}
+.status-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eef2f5;padding:12px 20px;border-radius:10px;margin-bottom:18px;font-weight:500;font-size:.92rem;border-left:4px solid var(--primary)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#9e9e9e;margin-right:8px;animation:pulse 1.8s infinite}
+@keyframes pulse{0%{transform:scale(.95);opacity:.8}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.95);opacity:.8}}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:.9rem;cursor:pointer;font-weight:600;background:var(--primary);color:#fff;transition:all .2s}
+.btn:hover{background:var(--primary-hover);transform:translateY(-1px)}
+.latest{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;background:#fafafa;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:22px}
+.latest .lbl{font-weight:700;color:#444}
+.next-head{text-align:center;margin:0 0 14px;font-size:1.25rem;color:#333}
+.next-head b{color:var(--primary)}
+.pw{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:12px}
+@media (max-width:768px){.pw{grid-template-columns:1fr}}
+.pbox{background:linear-gradient(135deg,#fffdf4 0%,#fff6d9 100%);border:2px solid #ffcc00;padding:20px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(255,193,7,.15)}
+.pbox.blue{background:linear-gradient(135deg,#f0f7ff 0%,#e1effe 100%);border-color:#64b5f6;box-shadow:0 4px 15px rgba(33,150,243,.12)}
+.ptitle{font-size:1.05rem;font-weight:bold;color:var(--gold);letter-spacing:.5px;margin-bottom:8px}
+.pbox.blue .ptitle{color:var(--blue)}
+.pbig{font-size:2.6rem;font-weight:800;color:var(--primary);letter-spacing:2px;margin:6px 0}
+.tags{display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tag{background:#fff;border:1px solid #ffe082;padding:4px 12px;border-radius:20px;font-size:.85rem;font-weight:600;color:var(--gold)}
+.pbox.blue .tag{border-color:#90caf9;color:var(--blue)}
+.drow{display:flex;justify-content:center;gap:14px;margin:12px 0}
+.bigdice{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:#fff;border:3px solid var(--primary);border-radius:12px;color:var(--primary);font-size:1.9rem;font-weight:900;box-shadow:0 5px 12px rgba(211,47,47,.2),inset 0 -2px 0 rgba(0,0,0,.1);animation:bounce 1s infinite alternate}
+.bigdice:nth-child(2){animation-delay:.2s}.bigdice:nth-child(3){animation-delay:.4s}
+.bigdice.sm{width:40px;height:40px;font-size:1.3rem;border-width:2px;animation:none}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+.pnote{font-size:.82rem;color:#888;margin:10px 0 0}
+.honest{background:#fff8e1;border:1px solid #ffe082;color:#6d4c00;border-radius:10px;padding:10px 14px;font-size:.88rem;margin-bottom:24px}
+.sec{font-size:1.3rem;color:#333;margin:28px 0 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:900px){.grid3{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.grid3{grid-template-columns:1fr}}
+.bet{background:#fafafa;padding:16px;border-radius:10px;border:1px solid var(--border);border-top:4px solid var(--primary);display:flex;flex-direction:column}
+.bet.c2{border-top-color:#ff9800}.bet.c3{border-top-color:#2196f3}.bet.c4{border-top-color:#00bcd4}.bet.c5{border-top-color:#9c27b0}.bet.c6{border-top-color:#4caf50}
+.bet h3{margin:0 0 8px;font-size:.95rem;color:#444}
+.bet .pick{font-size:1.6rem;font-weight:800;color:var(--primary);line-height:1.2}
+.bet .pp{font-size:.85rem;color:#555;margin:2px 0 10px}
+.opt{display:grid;grid-template-columns:1fr 70px 56px 56px;gap:8px;align-items:center;font-size:.86rem;padding:3px 0}
+.opt.sel{font-weight:700}
+.opt.head{font-size:.74rem;color:#999;padding:0}
+.gap{display:none;background:#fff3e0;border:1px solid #ffe082;color:#e65100;padding:10px 16px;border-radius:8px;margin-bottom:14px;font-size:.9rem}
+.bar{height:8px;background:#e8ecef;border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:#ef9a9a;border-radius:0 4px 4px 0}
+.opt.sel .bar i{background:var(--primary)}
+.opt .n{text-align:right;font-variant-numeric:tabular-nums}
+.faces{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media (max-width:600px){.faces{grid-template-columns:repeat(3,1fr)}}
+.face{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center;transition:transform .2s}
+.face:hover{transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,.06)}
+.face.sel{border-color:#ef9a9a;background:#fffbfb}
+.face.best{border:2px solid var(--primary);background:#fff5f5;box-shadow:0 4px 12px rgba(211,47,47,.15)}
+.ftag{font-size:.74rem;font-weight:700;color:var(--primary);margin:2px 0}.ftag.top{color:#fff;background:var(--primary);border-radius:10px;display:inline-block;padding:1px 8px}.ftag.none{visibility:hidden}
+.badge{display:inline-block;width:28px;height:28px;line-height:28px;border-radius:6px;background:var(--primary);color:#fff;font-weight:bold;margin-bottom:4px}
+.face .c{font-size:.95rem;font-weight:bold;color:#222}
+.face .g{font-size:.78rem;color:#777;margin-top:2px}
+.box{background:#fafafa;border:1px solid var(--border);padding:18px;border-radius:12px}
+.tr{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;text-align:center;background:#fff}
+th,td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:.9rem}
+th{background:var(--primary);color:#fff;font-weight:600;position:sticky;top:0}
+tr:nth-child(even) td{background:#fafbfc}
+tr:hover td{background:#f1f5f9}
+.scroll{max-height:420px;overflow:auto}
+.ball{display:inline-block;width:24px;height:24px;line-height:21px;border-radius:50%;background:#fff;border:1.5px solid var(--primary);color:var(--primary);font-weight:bold;font-size:.85rem;margin:0 2px}
+.bt{display:inline-block;padding:3px 8px;border-radius:4px;font-size:.8rem;font-weight:600}
+.b-lon{background:#ffebee;color:#c62828}.b-hoa{background:#fff8e1;color:#f57f17}.b-nho{background:#e8f5e9;color:var(--green)}
+.won{color:var(--green);font-weight:700}.lost{color:#c62828;font-weight:700}
+.model{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.mchip{background:#fff;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:.84rem}
+.note{font-size:.85rem;color:#888;margin-top:14px;text-align:center}
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-weight:600}
+.dayhead select{margin-left:6px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;font-weight:600;color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+@media (max-width:700px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.tile .v{font-size:1.6rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums}
+.tile .l{font-size:.8rem;color:#666;margin-top:2px}
+.ball.hit{background:var(--green);border-color:var(--green);color:#fff}
+.sub{font-size:1.05rem;color:#333;margin:22px 0 10px}
+#daysAll tr.pick{cursor:pointer}
+#daysAll tr.cur td{background:#fff3e0;font-weight:700}
+tr.total td{background:#fff8e1;font-weight:700}
+.twin th,.twin td{padding:6px;font-size:.82rem}
+.twin td:first-child{white-space:nowrap}
+/* Grid children default to min-width:auto, which lets wide tables push the page past the screen */
+.pw>*,.grid3>*,.tiles>*{min-width:0}
+@media (max-width:600px){body{padding:6px}.container{padding:14px 10px;border-radius:10px}h1{font-size:1.45rem}.pbig{font-size:2rem}.status-bar{padding:10px 12px}.bigdice{width:46px;height:46px;font-size:1.5rem}.sec{font-size:1.1rem}}
+#dayLog td,#dayLog th,#daysAll td{white-space:nowrap;padding:7px 8px;font-size:.84rem}
+#dayLog .ball{width:22px;height:22px;line-height:19px;font-size:.8rem;margin:0 1px}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎯 Dự Đoán Kết Quả Bingo18</h1>
+  <div class="subtitle">Dự đoán từng kỳ theo mô hình lịch sử (Markov) cho mọi kiểu chơi · cập nhật realtime mỗi 3 giây</div>
+
+  <div class="status-bar">
+    <div><span class="dot" id="dot"></span><span id="st">Đang kết nối…</span></div>
+    <div style="display:flex;gap:12px;align-items:center"><span id="upd" style="color:#666;font-size:.85rem"></span><button class="btn" onclick="poll()">🔄 Cập nhật</button></div>
+  </div>
+
+  <div class="latest" id="latest"></div>
+
+  <h2 class="next-head" id="nextHead">Dự đoán kỳ tiếp theo</h2>
+  <div class="gap" id="gap"></div>
+  <div class="pw">
+    <div class="pbox">
+      <div class="ptitle">🔮 CỬA &amp; TỔNG ĐIỂM</div>
+      <div class="pbig" id="pCat">LỚN</div>
+      <div class="tags" id="pCatTags"></div>
+      <p class="pnote" id="pCatNote"></p>
+    </div>
+    <div class="pbox blue">
+      <div class="ptitle">🎲 GỢI Ý 3 SỐ XÚC XẮC</div>
+      <div class="drow" id="pDice"></div>
+      <div class="tags" id="pDiceTags"></div>
+      <p class="pnote" id="pDiceNote"></p>
+    </div>
+  </div>
+  <div class="honest" id="honest"></div>
+
+  <h2 class="sec">📋 Dự đoán theo 5 kiểu chơi của Vietlott</h2>
+  <div class="grid3" id="bets"></div>
+
+  <h2 class="sec">👯 Kỳ tới nếu ra số trùng thì là số nào?</h2>
+  <div class="pw" id="twins"></div>
+  <p class="note" style="margin-top:0">"Khả năng ra" là xác suất kỳ tới có cặp/bộ ba đó. "Nếu ra trùng thì là số này" là trong trường hợp kỳ tới có trùng, số đó chiếm bao nhiêu phần. Theo lý thuyết 6 số như nhau (16,7% mỗi số); chênh lệch của mô hình đến từ dữ liệu quá khứ, chưa chắc lặp lại.</p>
+
+  <h2 class="sec">🎲 Chọn 1 số: từng số 1–6 cho kỳ tiếp theo</h2>
+  <div class="box">
+    <div class="faces" id="faces"></div>
+    <p class="note" style="margin-top:10px"><b>⭐ Gợi ý</b> là số có tỉ lệ mô hình cao nhất: trong lịch sử, sau những kỳ cùng cửa với kỳ vừa ra, số này xuất hiện ở kỳ kế tiếp nhiều nhất. Viền đỏ nhạt là các số còn lại trong bộ 3 số gợi ý. Theo lý thuyết, số nào cũng có 42,1% khả năng ra; độ chênh của mô hình đến từ dữ liệu quá khứ, chưa chắc lặp lại.</p>
+  </div>
+
+  <h2 class="sec">📊 Mô hình theo lịch sử vs dự đoán cố định</h2>
+  <p class="note" style="text-align:left;margin:0 0 10px">Mỗi kỳ trong lịch sử được dự đoán chỉ bằng dữ liệu trước kỳ đó, rồi chấm trúng/trượt. Cột "Đoán bừa sẽ trúng" là tỉ lệ kỳ vọng nếu kỳ trước không ảnh hưởng gì đến kỳ sau. Mô hình chỉ có giá trị nếu trúng cao hơn hẳn cột này một cách ổn định.</p>
+  <div class="tr"><table id="track"></table></div>
+
+  <h2 class="sec">📅 Đối chiếu số dự đoán với kết quả thực tế theo ngày</h2>
+  <div class="dayhead">
+    <label>Chọn ngày: <select id="daySel" onchange="pickDay(this.value)"></select></label>
+    <span class="note" style="margin:0">🟢 = kỳ quay lúc trang đang mở · các kỳ khác được chấm lại, mỗi kỳ chỉ dùng dữ liệu trước kỳ đó</span>
+  </div>
+  <div class="tiles" id="dayTiles"></div>
+  <div class="tr"><table id="dayStats"></table></div>
+  <div class="tr scroll" style="margin-top:12px"><table id="dayLog"></table></div>
+  <h3 class="sub">Tổng hợp từng ngày <span class="note" style="margin:0">(bấm vào một dòng để xem chi tiết ngày đó)</span></h3>
+  <div class="tr scroll" style="max-height:320px"><table id="daysAll"></table></div>
+
+  <h2 class="sec">🧪 Kiểm định: kết quả có ngẫu nhiên không?</h2>
+  <div class="box">
+    <div id="modelText"></div>
+    <div class="model" id="model"></div>
+  </div>
+
+  <h2 class="sec">📜 Lịch sử kết quả</h2>
+  <div class="tr scroll"><table id="hist"></table></div>
+  <p class="note" id="foot"></p>
+</div>
+
+<script>
+const API = "https://xosohomnay.com/live/dai.php?id=121";
+const LOCAL = location.protocol.startsWith("http") && location.port === "8018"; // served by bingo18-server.js
+const HOSTED = location.protocol.startsWith("http") && !LOCAL; // online copy (GitHub Pages) with a data.json refreshed by GitHub Actions
+const STORE = "b18_draws_v1"; // shared with the other Bingo18 pages
+const POLL_MS = 3000;
+// Seed rows: [drawNo, die1, die2, die3, "dd-mm-yyyy"]
+const SEED = [[191744,2,3,2,"17-10-2026"],[191745,6,5,1,"17-10-2026"],[191746,3,4,2,"17-10-2026"],[191747,5,6,6,"17-10-2026"],[191748,1,3,4,"17-10-2026"],[191749,2,2,4,"17-10-2026"],[191750,2,1,4,"17-10-2026"],[191751,6,1,2,"17-10-2026"],[191752,5,5,2,"17-10-2026"],[191753,4,5,5,"17-10-2026"],[191754,2,1,2,"17-10-2026"],[191755,5,6,3,"17-10-2026"],[191756,2,6,3,"17-10-2026"],[191757,4,5,5,"17-10-2026"],[191758,6,3,3,"17-10-2026"],[191759,4,4,6,"17-10-2026"],[191760,5,4,5,"17-10-2026"],[191761,5,4,6,"17-10-2026"],[191762,6,4,4,"17-10-2026"],[191763,2,1,5,"17-10-2026"],[191903,2,6,4,"18-10-2026"],[191904,6,4,6,"18-10-2026"],[191905,2,3,2,"18-10-2026"],[191906,4,3,1,"18-10-2026"],[191907,6,2,5,"18-10-2026"],[191908,2,5,6,"18-10-2026"],[191909,3,4,1,"18-10-2026"],[191910,2,3,1,"18-10-2026"],[191911,5,2,2,"18-10-2026"],[191912,5,6,3,"18-10-2026"],[191913,1,4,5,"18-10-2026"],[191914,3,5,2,"18-10-2026"],[191915,6,1,5,"18-10-2026"],[191916,4,2,1,"18-10-2026"],[191917,3,4,5,"18-10-2026"],[191918,3,2,4,"18-10-2026"],[191919,3,1,6,"18-10-2026"],[191920,1,3,5,"18-10-2026"],[191921,4,6,6,"18-10-2026"],[191922,4,6,3,"18-10-2026"],[192062,5,2,4,"19-10-2026"],[192063,4,5,3,"19-10-2026"],[192064,4,5,5,"19-10-2026"],[192065,4,3,6,"19-10-2026"],[192066,6,5,5,"19-10-2026"],[192067,4,3,3,"19-10-2026"],[192068,4,3,6,"19-10-2026"],[192069,2,1,6,"19-10-2026"],[192070,4,5,5,"19-10-2026"],[192071,6,3,5,"19-10-2026"],[192072,5,2,4,"19-10-2026"],[192073,2,2,5,"19-10-2026"],[192074,3,1,2,"19-10-2026"],[192075,6,2,2,"19-10-2026"],[192076,4,1,6,"19-10-2026"],[192077,6,5,3,"19-10-2026"],[192078,5,6,2,"19-10-2026"],[192079,4,4,5,"19-10-2026"],[192080,2,6,6,"19-10-2026"],[192081,4,1,1,"19-10-2026"],[192221,1,3,1,"20-10-2026"],[192222,1,3,6,"20-10-2026"],[192223,3,5,2,"20-10-2026"],[192224,2,6,5,"20-10-2026"],[192225,1,1,5,"20-10-2026"],[192226,1,5,1,"20-10-2026"],[192227,4,4,4,"20-10-2026"],[192228,1,6,6,"20-10-2026"],[192229,6,6,6,"20-10-2026"],[192230,6,2,2,"20-10-2026"],[192231,5,2,3,"20-10-2026"],[192232,4,6,3,"20-10-2026"],[192233,5,1,4,"20-10-2026"],[192234,5,3,2,"20-10-2026"],[192235,5,5,4,"20-10-2026"],[192236,3,3,4,"20-10-2026"],[192237,5,2,4,"20-10-2026"],[192238,6,5,3,"20-10-2026"],[192239,5,2,5,"20-10-2026"],[192240,6,5,2,"20-10-2026"],[192380,5,6,3,"21-10-2026"],[192381,6,1,4,"21-10-2026"],[192382,6,1,2,"21-10-2026"],[192383,2,2,4,"21-10-2026"],[192384,4,1,6,"21-10-2026"],[192385,1,1,5,"21-10-2026"],[192386,4,2,3,"21-10-2026"],[192387,1,4,4,"21-10-2026"],[192388,4,6,6,"21-10-2026"],[192389,3,4,6,"21-10-2026"],[192390,6,2,5,"21-10-2026"],[192391,2,5,3,"21-10-2026"],[192392,5,2,3,"21-10-2026"],[192393,2,4,6,"21-10-2026"],[192394,5,1,6,"21-10-2026"],[192395,5,5,1,"21-10-2026"],[192396,6,6,6,"21-10-2026"],[192397,3,2,3,"21-10-2026"],[192398,5,6,4,"21-10-2026"],[192399,4,6,5,"21-10-2026"],[192539,5,4,6,"22-10-2026"],[192540,3,4,3,"22-10-2026"],[192541,5,4,3,"22-10-2026"],[192542,5,4,5,"22-10-2026"],[192543,4,5,6,"22-10-2026"],[192544,1,3,6,"22-10-2026"],[192545,5,4,1,"22-10-2026"],[192546,1,1,6,"22-10-2026"],[192547,6,2,6,"22-10-2026"],[192548,2,5,3,"22-10-2026"],[192549,3,1,3,"22-10-2026"],[192550,5,3,5,"22-10-2026"],[192551,2,2,6,"22-10-2026"],[192552,5,2,6,"22-10-2026"],[192553,4,1,4,"22-10-2026"],[192554,4,4,1,"22-10-2026"],[192555,2,4,4,"22-10-2026"],[192556,6,3,2,"22-10-2026"],[192557,4,6,2,"22-10-2026"],[192558,1,6,4,"22-10-2026"],[192698,2,5,2,"23-10-2026"],[192699,4,3,1,"23-10-2026"],[192700,6,6,2,"23-10-2026"],[192701,2,3,2,"23-10-2026"],[192702,6,4,6,"23-10-2026"],[192703,6,5,4,"23-10-2026"],[192704,3,5,5,"23-10-2026"],[192705,6,6,6,"23-10-2026"],[192706,5,6,3,"23-10-2026"],[192707,6,3,2,"23-10-2026"],[192708,6,6,1,"23-10-2026"],[192709,6,2,1,"23-10-2026"],[192710,4,3,1,"23-10-2026"],[192711,1,6,3,"23-10-2026"],[192712,2,2,2,"23-10-2026"],[192713,1,4,4,"23-10-2026"],[192714,5,1,6,"23-10-2026"],[192715,3,1,5,"23-10-2026"],[192716,4,5,1,"23-10-2026"],[192717,6,6,6,"23-10-2026"],[192857,2,5,4,"24-10-2026"],[192858,1,1,2,"24-10-2026"],[192859,6,5,4,"24-10-2026"],[192860,3,1,2,"24-10-2026"],[192861,5,5,2,"24-10-2026"],[192862,2,1,4,"24-10-2026"],[192863,1,2,2,"24-10-2026"],[192864,1,5,3,"24-10-2026"],[192865,1,1,5,"24-10-2026"],[192866,4,3,6,"24-10-2026"],[192867,3,4,4,"24-10-2026"],[192868,4,5,2,"24-10-2026"],[192869,3,6,6,"24-10-2026"],[192870,4,3,5,"24-10-2026"],[192871,2,3,3,"24-10-2026"],[192872,1,4,2,"24-10-2026"],[192873,1,2,1,"24-10-2026"],[192874,3,6,5,"24-10-2026"],[192875,5,3,3,"24-10-2026"],[192876,1,1,1,"24-10-2026"],[193016,2,1,5,"25-10-2026"],[193017,6,6,6,"25-10-2026"],[193018,5,6,2,"25-10-2026"],[193019,1,4,5,"25-10-2026"],[193020,5,6,5,"25-10-2026"],[193021,4,3,2,"25-10-2026"],[193022,6,3,2,"25-10-2026"],[193023,3,2,5,"25-10-2026"],[193024,5,6,2,"25-10-2026"],[193025,6,4,5,"25-10-2026"],[193026,4,5,6,"25-10-2026"],[193027,5,5,1,"25-10-2026"],[193028,6,4,5,"25-10-2026"],[193029,1,2,1,"25-10-2026"],[193030,1,6,3,"25-10-2026"],[193031,6,1,4,"25-10-2026"],[193032,1,5,3,"25-10-2026"],[193033,4,3,5,"25-10-2026"],[193034,2,5,5,"25-10-2026"],[193035,1,4,1,"25-10-2026"],[193175,2,1,4,"26-10-2026"],[193176,4,1,4,"26-10-2026"],[193177,1,1,6,"26-10-2026"],[193178,6,5,2,"26-10-2026"],[193179,6,1,3,"26-10-2026"],[193180,6,1,6,"26-10-2026"],[193181,3,1,4,"26-10-2026"],[193182,4,4,3,"26-10-2026"],[193183,4,3,4,"26-10-2026"],[193184,4,4,2,"26-10-2026"],[193185,4,5,2,"26-10-2026"],[193186,6,4,1,"26-10-2026"],[193187,3,3,6,"26-10-2026"],[193188,5,3,3,"26-10-2026"],[193189,2,5,5,"26-10-2026"],[193190,6,6,2,"26-10-2026"],[193191,5,3,5,"26-10-2026"],[193192,3,6,3,"26-10-2026"],[193193,5,4,1,"26-10-2026"],[193194,5,5,6,"26-10-2026"],[193334,4,1,5,"27-10-2026"],[193335,2,1,3,"27-10-2026"],[193336,3,3,2,"27-10-2026"],[193337,3,4,2,"27-10-2026"],[193338,1,4,3,"27-10-2026"],[193339,4,2,2,"27-10-2026"],[193340,5,1,1,"27-10-2026"],[193341,5,5,5,"27-10-2026"],[193342,1,6,1,"27-10-2026"],[193343,2,3,6,"27-10-2026"],[193344,5,6,3,"27-10-2026"],[193345,5,5,4,"27-10-2026"],[193346,3,1,6,"27-10-2026"],[193347,5,2,6,"27-10-2026"],[193348,2,2,2,"27-10-2026"],[193349,3,2,6,"27-10-2026"],[193350,4,6,1,"27-10-2026"],[193351,3,5,3,"27-10-2026"],[193352,3,4,2,"27-10-2026"],[193353,1,6,1,"27-10-2026"],[193493,2,5,5,"28-10-2026"],[193494,4,2,3,"28-10-2026"],[193495,4,3,4,"28-10-2026"],[193496,5,5,6,"28-10-2026"],[193497,4,1,4,"28-10-2026"],[193498,2,4,4,"28-10-2026"],[193499,1,3,4,"28-10-2026"],[193500,2,2,5,"28-10-2026"],[193501,6,5,6,"28-10-2026"],[193502,3,4,2,"28-10-2026"],[193503,4,6,6,"28-10-2026"],[193504,4,4,3,"28-10-2026"],[193505,3,4,6,"28-10-2026"],[193506,1,1,5,"28-10-2026"],[193507,4,1,4,"28-10-2026"],[193508,2,5,1,"28-10-2026"],[193509,5,4,4,"28-10-2026"],[193510,4,2,6,"28-10-2026"],[193511,4,3,3,"28-10-2026"],[193512,5,1,6,"28-10-2026"],[193652,3,4,1,"29-10-2026"],[193653,1,4,2,"29-10-2026"],[193654,3,5,4,"29-10-2026"],[193655,3,3,6,"29-10-2026"],[193656,4,3,5,"29-10-2026"],[193657,4,2,4,"29-10-2026"],[193658,3,1,1,"29-10-2026"],[193659,2,4,5,"29-10-2026"],[193660,1,4,5,"29-10-2026"],[193661,5,1,2,"29-10-2026"],[193662,5,4,6,"29-10-2026"],[193663,4,4,5,"29-10-2026"],[193664,2,3,6,"29-10-2026"],[193665,5,2,1,"29-10-2026"],[193666,1,3,3,"29-10-2026"],[193667,6,6,5,"29-10-2026"],[193668,1,4,1,"29-10-2026"],[193669,4,1,4,"29-10-2026"],[193670,2,2,5,"29-10-2026"],[193671,2,2,3,"29-10-2026"],[193694,2,2,5,"30-10-2026"],[193695,4,5,5,"30-10-2026"],[193696,2,4,3,"30-10-2026"],[193697,5,3,4,"30-10-2026"],[193698,6,5,6,"30-10-2026"],[193699,3,3,2,"30-10-2026"],[193700,3,3,2,"30-10-2026"],[193701,5,2,3,"30-10-2026"],[193702,3,6,3,"30-10-2026"],[193703,1,6,1,"30-10-2026"],[193704,2,2,5,"30-10-2026"],[193705,6,5,4,"30-10-2026"],[193706,4,6,2,"30-10-2026"],[193707,3,6,3,"30-10-2026"],[193708,1,6,5,"30-10-2026"],[193709,4,3,3,"30-10-2026"],[193710,3,4,5,"30-10-2026"],[193711,3,3,4,"30-10-2026"],[193712,2,4,6,"30-10-2026"],[193713,6,2,4,"30-10-2026"]];
+
+/* ---------- Exact model: 216 equally likely ordered outcomes ---------- */
+const OUT = [];
+for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) for (let c = 1; c <= 6; c++) OUT.push([a, b, c]);
+const prob = t => OUT.filter(t).length / 216;
+const sumD = d => d[0] + d[1] + d[2];
+const distinct = d => new Set(d).size;
+const cnt = (d, f) => d.filter(v => v === f).length;
+const key = d => [...d].sort((x, y) => x - y).join("-");
+const catIdx = s => s <= 9 ? 0 : s <= 11 ? 1 : 2;
+const CAT = ["Nhỏ", "Hoà", "Lớn"], CATCLS = ["b-nho", "b-hoa", "b-lon"];
+
+const WAYS = Array(19).fill(0); OUT.forEach(o => WAYS[sumD(o)]++);
+const PCAT = [81 / 216, 54 / 216, 81 / 216];
+const P_FACE = 91 / 216; // a given face shows on at least one die
+const P_PAIR = 16 / 216; // a given face shows on at least two dice
+const P_TRIPLE = 1 / 216, P_TRIPLE_ANY = 6 / 216;
+// Prize for one 10,000đ ticket, from the official vietlott.vn rules
+const STAKE = 10000;
+const PAY_CAT = [15000, 20000, 15000];
+const PAY_SUM = { 3: 1200000, 4: 400000, 5: 200000, 6: 120000, 7: 80000, 8: 55000, 9: 47000, 10: 44000, 11: 44000, 12: 47000, 13: 55000, 14: 80000, 15: 120000, 16: 200000, 17: 400000, 18: 1200000 };
+const PAY_FACE = [0, 12000, 20000, 30000]; // by how many dice show the chosen face
+const PAY_PAIR = 75000, PAY_TRIPLE = 1200000, PAY_TRIPLE_ANY = 200000;
+const K_SMOOTH = 20; // pseudo-counts pulling sparse history toward the exact probabilities
+const K_SUM = 5; // lighter smoothing for sums, conditioned on the exact previous sum
+// Pairs and triples are rare, so they need far more pseudo-counts (about 7 and 5 expected hits) to stay sane
+const K_PAIR = 100, K_TRIP = 1000;
+const argmax = arr => arr.reduce((bi, v, i) => v > arr[bi] ? i : bi, 0);
+// All unordered results; probability = number of orderings / 216
+const COMBOS = [];
+for (let a = 1; a <= 6; a++) for (let b = a; b <= 6; b++) for (let c = b; c <= 6; c++) COMBOS.push([a, b, c]);
+const comboP = c => ({ 3: 6, 2: 3, 1: 1 })[distinct(c)] / 216;
+
+// Walk-forward Markov model: predicts draw index i using only draws before i,
+// conditioned on what the immediately previous draw showed
+function predictAt(all, i) {
+  const prev = all[i - 1].d, ps = sumD(prev), pc = catIdx(ps);
+  const faceC = Array(7).fill(0), pairC = Array(7).fill(0), tripC = Array(7).fill(0), catC = [0, 0, 0], sumC = Array(19).fill(0);
+  let nCat = 0, nSum = 0;
+  for (let j = 1; j < i; j++) {
+    if (all[j].ky !== all[j - 1].ky + 1) continue;
+    const a = all[j - 1].d, b = all[j].d, sa = sumD(a), sb = sumD(b);
+    if (catIdx(sa) === pc) {
+      catC[catIdx(sb)]++; nCat++;
+      for (let f = 1; f <= 6; f++) { const c = cnt(b, f); if (c) faceC[f]++; if (c >= 2) pairC[f]++; if (c === 3) tripC[f]++; }
+    }
+    if (sa === ps) { sumC[sb]++; nSum++; }
+  }
+  const smK = (c, n, p, k) => (c + k * p) / (n + k), sm = (c, n, p) => smK(c, n, p, K_SMOOTH);
+  const catP = [0, 1, 2].map(k => sm(catC[k], nCat, PCAT[k]));
+  const cat = argmax(catP);
+  const sums = []; for (let s = 3; s <= 18; s++) if (catIdx(s) === cat) sums.push(s);
+  const sumP = {}; sums.forEach(s => sumP[s] = (sumC[s] + K_SUM * WAYS[s] / 216) / (nSum + K_SUM));
+  const sum = sums.reduce((b, s) => sumP[s] > sumP[b] ? s : b, sums[0]);
+  // Faces, pairs and triples: what followed a draw of the same category most often
+  const faceP = Array(7).fill(0), pairP = Array(7).fill(0), tripP = Array(7).fill(0);
+  for (let f = 1; f <= 6; f++) { faceP[f] = sm(faceC[f], nCat, P_FACE); pairP[f] = smK(pairC[f], nCat, P_PAIR, K_PAIR); tripP[f] = smK(tripC[f], nCat, P_TRIPLE, K_TRIP); }
+  const best6 = p => { let b = 1; for (let f = 2; f <= 6; f++) if (p[f] > p[b]) b = f; return b; };
+  const face = best6(faceP), pair = best6(pairP), trip = best6(tripP);
+  const tripAnyP = smK(tripC.reduce((a, b) => a + b, 0), nCat, P_TRIPLE_ANY, K_TRIP / 6);
+  // Exact result: among the most likely results with the chosen sum, prefer ones containing that face,
+  // then the one seen most in the last 50 draws
+  const recent = {}; all.slice(Math.max(0, i - 50), i).forEach(x => { const k = key(x.d); recent[k] = (recent[k] || 0) + 1; });
+  const cands = COMBOS.filter(c => sumD(c) === sum), best = Math.max(...cands.map(comboP));
+  const combo = cands.filter(c => comboP(c) === best)
+    .sort((x, y) => (y.includes(face) - x.includes(face)) || (recent[key(y)] || 0) - (recent[key(x)] || 0))[0];
+  return { prevKy: all[i - 1].ky, prevCat: pc, prevSum: ps, nCat, nSum, cat, catP, sum, sumP, combo, face, faceP, pair, pairP, trip, tripP, tripAnyP };
+}
+
+// The five official Bingo18 bet types; pay(d) = prize for a 10,000đ ticket given result d
+function picksOf(pr) {
+  const won = (t, prize) => d => t(d) ? prize : 0;
+  const tCat = d => catIdx(sumD(d)) === pr.cat, tSum = d => sumD(d) === pr.sum;
+  const tPair = d => cnt(d, pr.pair) >= 2, tTrip = d => cnt(d, pr.trip) === 3;
+  return [
+    { name: "Lớn / Hoà / Nhỏ", v: CAT[pr.cat], t: tCat, p: PCAT[pr.cat], pay: won(tCat, PAY_CAT[pr.cat]) },
+    { name: "Cộng tổng", v: String(pr.sum), t: tSum, p: WAYS[pr.sum] / 216, pay: won(tSum, PAY_SUM[pr.sum]) },
+    { name: "Chọn 1 số", v: String(pr.face), t: d => d.includes(pr.face), p: P_FACE, pay: d => PAY_FACE[cnt(d, pr.face)] },
+    { name: "Hai số trùng", v: `${pr.pair}-${pr.pair}`, t: tPair, p: P_PAIR, pay: won(tPair, PAY_PAIR) },
+    { name: "Ba số trùng", v: `${pr.trip}-${pr.trip}-${pr.trip}`, t: tTrip, p: P_TRIPLE, pay: won(tTrip, PAY_TRIPLE) },
+  ];
+}
+// Control group: the same picks every draw
+const FIXED = picksOf({ cat: 2, sum: 12, face: 6, pair: 6, trip: 6 });
+const NPICK = FIXED.length;
+const vnd = v => v.toLocaleString("vi-VN") + "đ";
+const money = v => `<span class="${v >= 0 ? "won" : "lost"}">${v > 0 ? "+" : v < 0 ? "−" : ""}${vnd(Math.abs(v))}</span>`;
+
+const predCache = new Map(); // drawNo -> prediction made before that draw
+function backtest(all) {
+  const rows = [];
+  for (let i = 1; i < all.length; i++) {
+    if (all[i].ky !== all[i - 1].ky + 1) continue;
+    let pr = predCache.get(all[i].ky);
+    if (!pr) { pr = predictAt(all, i); predCache.set(all[i].ky, pr); }
+    rows.push({ x: all[i], pr, picks: picksOf(pr) });
+  }
+  return rows;
+}
+
+/* ---------- Data ---------- */
+const draws = new Map(), liveKys = new Set();
+let inProgress = null;
+function put(ky, d, date) { if (draws.has(ky)) return false; draws.set(ky, { ky, d, date }); return true; }
+function sorted() { return [...draws.values()].sort((a, b) => a.ky - b.ky); }
+function save() { try { localStorage.setItem(STORE, JSON.stringify(sorted().map(x => [x.ky, ...x.d, x.date]))); } catch (e) { /* storage full or blocked */ } }
+function load() {
+  SEED.forEach(r => put(r[0], [r[1], r[2], r[3]], r[4]));
+  try { JSON.parse(localStorage.getItem(STORE) || "[]").forEach(r => put(r[0], [r[1], r[2], r[3]], r[4])); } catch (e) { /* corrupted storage: ignore */ }
+}
+
+/* ---------- Statistics ---------- */
+function lnGamma(z) {
+  const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+  z -= 1; let x = c[0];
+  for (let i = 1; i < 9; i++) x += c[i] / (z + i);
+  const t = z + 7.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+// Regularized upper incomplete gamma Q(a, x)
+function gammaQ(a, x) {
+  if (x <= 0) return 1;
+  const lead = Math.exp(-x + a * Math.log(x) - lnGamma(a));
+  if (x < a + 1) {
+    let s = 1 / a, del = s, ap = a;
+    for (let n = 0; n < 1000; n++) { ap++; del *= x / ap; s += del; if (Math.abs(del) < Math.abs(s) * 1e-15) break; }
+    return 1 - s * lead;
+  }
+  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+  for (let i = 1; i < 1000; i++) {
+    const an = -i * (i - a); b += 2;
+    d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
+    c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+    d = 1 / d; const del = d * c; h *= del;
+    if (Math.abs(del - 1) < 1e-15) break;
+  }
+  return lead * h;
+}
+const chiP = (x, df) => df > 0 ? Math.min(1, Math.max(0, gammaQ(df / 2, x / 2))) : 1;
+// Goodness-of-fit; adjacent bins are merged until each expected count >= 5
+function chiGOF(obs, probs) {
+  const n = obs.reduce((a, b) => a + b, 0);
+  const bins = []; let co = 0, cp = 0;
+  obs.forEach((o, i) => { co += o; cp += probs[i]; if (cp * n >= 5) { bins.push([co, cp]); co = 0; cp = 0; } });
+  if (cp > 0) { if (bins.length) { bins[bins.length - 1][0] += co; bins[bins.length - 1][1] += cp; } else bins.push([co, cp]); }
+  let x = 0; bins.forEach(([o, p]) => { const e = p * n; x += (o - e) ** 2 / e; });
+  return n ? chiP(x, bins.length - 1) : 1;
+}
+function chiIndep(m) {
+  const R = m.map(r => r.reduce((a, b) => a + b, 0));
+  const C = m[0].map((_, j) => m.reduce((a, r) => a + r[j], 0));
+  const n = R.reduce((a, b) => a + b, 0);
+  let x = 0;
+  m.forEach((r, i) => r.forEach((o, j) => { const e = R[i] * C[j] / n; if (e > 0) x += (o - e) ** 2 / e; }));
+  return n ? chiP(x, (R.filter(v => v > 0).length - 1) * (C.filter(v => v > 0).length - 1)) : 1;
+}
+
+/* ---------- Rendering ---------- */
+const pct = (v, dp = 1) => (v * 100).toFixed(dp).replace(".", ",") + "%";
+const fmtP = p => p < 0.0001 ? "< 0,0001" : p.toFixed(4).replace(".", ",");
+const balls = d => d.map(v => `<span class="ball">${v}</span>`).join("");
+const $ = id => document.getElementById(id);
+
+const tick = ok => ok ? '<span class="won">✓</span>' : '<span class="lost">✗</span>';
+
+function renderPrediction(all, nextKy, pr) {
+  const last = all[all.length - 1];
+  $("nextHead").innerHTML = `Dự đoán kỳ <b>#${nextKy}</b>`;
+  $("gap").style.display = nextKy > last.ky + 1 ? "block" : "none";
+  $("gap").textContent = `⚠️ Thiếu kết quả kỳ #${last.ky + 1}${nextKy - 1 > last.ky + 1 ? "–#" + (nextKy - 1) : ""} (trang đóng hoặc mất mạng lúc đó), nên dự đoán đang dựa trên kỳ #${last.ky}. ` +
+    (LOCAL ? "Trang đang tự bù các kỳ thiếu, chờ vài giây." : HOSTED ? "Trang online tự bù kỳ thiếu từ dữ liệu cập nhật khoảng 5–10 phút một lần." : "Để trang tự bù kỳ thiếu, hãy mở bằng file Mo-Bingo18.bat (cùng thư mục) thay vì bấm đúp file HTML.");
+  $("pCat").textContent = CAT[pr.cat].toUpperCase();
+  $("pCatTags").innerHTML = [`Cộng tổng: ${pr.sum}`, `Trúng nhận ${vnd(PAY_CAT[pr.cat])}`].map(t => `<span class="tag">${t}</span>`).join("");
+  $("pCatNote").innerHTML = `Kỳ #${pr.prevKy} ra <b>${CAT[pr.prevCat]}</b> (tổng ${pr.prevSum}). Trong lịch sử có ${pr.nCat} lần kỳ trước ra ${CAT[pr.prevCat]}; mô hình ước tính kỳ sau: ` +
+    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Tổng gợi ý: tổng hay ra nhất trong cửa ${CAT[pr.cat]} sau ${pr.nSum} lần kỳ trước ra tổng ${pr.prevSum}.`;
+  $("pDice").innerHTML = pr.combo.map(v => `<span class="bigdice">${v}</span>`).join("");
+  $("pDiceTags").innerHTML = [`Chọn 1 số: ${pr.face}`, `Hai số trùng: ${pr.pair}-${pr.pair}`, `Ba số trùng: ${pr.trip}-${pr.trip}-${pr.trip}`].map(t => `<span class="tag">${t}</span>`).join("");
+  $("pDiceNote").textContent = `Bộ 3 số gợi ý chỉ để tham khảo, không phải kiểu chơi. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
+  $("honest").innerHTML = `⚠️ <b>Đọc trước khi đánh:</b> dự đoán đổi theo từng kỳ, dựa trên mô hình Markov: sau những kỳ giống kỳ vừa ra, kỳ kế tiếp trong lịch sử hay ra gì nhất (có làm mượt để tránh bị lệch do ít dữ liệu). ` +
+    `Hiện kiểm định chưa thấy kỳ trước ảnh hưởng kỳ sau, nên cơ hội trúng thật vẫn bằng xác suất lý thuyết. Theo cơ cấu giải của Vietlott, mỗi vé 10.000đ chỉ trả lại trung bình 5.000–5.700đ, nên đánh lâu dài chắc chắn lỗ. Hãy đặt ít.`;
+}
+
+function renderBets(pr) {
+  const sumsInCat = []; for (let s = 3; s <= 18; s++) if (catIdx(s) === pr.cat) sumsInCat.push(s);
+  sumsInCat.sort((a, b) => WAYS[b] - WAYS[a] || a - b);
+  const F = [1, 2, 3, 4, 5, 6];
+  const bets = [
+    ["Lớn / Hoà / Nhỏ", "", CAT[pr.cat], [["Nhỏ (3–9)", 0], ["Hoà (10–11)", 1], ["Lớn (12–18)", 2]].map(([l, k]) => [l, PCAT[k], pr.catP[k]]), pr.cat,
+      `Trúng nhận ${vnd(PAY_CAT[pr.cat])} / vé ${vnd(STAKE)}`],
+    [`Cộng tổng (cửa ${CAT[pr.cat]})`, "c6", String(pr.sum), sumsInCat.map(s => [`Tổng ${s}`, WAYS[s] / 216, pr.sumP[s]]), sumsInCat.indexOf(pr.sum),
+      `Trúng nhận ${vnd(PAY_SUM[pr.sum])} / vé ${vnd(STAKE)}`],
+    ["Chọn 1 số", "c3", `Số ${pr.face}`, F.map(f => [`Số ${f}`, P_FACE, pr.faceP[f]]), pr.face - 1,
+      "Ra 1 con: 12.000đ · 2 con: 20.000đ · 3 con: 30.000đ"],
+    ["Hai số trùng nhau", "c4", `${pr.pair}-${pr.pair}`, F.map(f => [`Cặp ${f}-${f}`, P_PAIR, pr.pairP[f]]), pr.pair - 1,
+      `Ra ít nhất hai số ${pr.pair}: nhận ${vnd(PAY_PAIR)}`],
+    ["Ba số trùng nhau", "c5", `${pr.trip}-${pr.trip}-${pr.trip}`, [...F.map(f => [`${f}-${f}-${f}`, P_TRIPLE, pr.tripP[f]]), ["Bộ ba bất kỳ", P_TRIPLE_ANY, pr.tripAnyP]], pr.trip - 1,
+      `Đúng ${pr.trip}-${pr.trip}-${pr.trip}: ${vnd(PAY_TRIPLE)} · bộ ba bất kỳ: ${vnd(PAY_TRIPLE_ANY)}`],
+  ];
+  const cards = bets.map(([title, cls, pick, opts, sel, pay]) => {
+    const val = o => o[2] != null ? o[2] : o[1], max = Math.max(...opts.map(val));
+    return `<div class="bet ${cls}"><h3>${title}</h3><div class="pick">${pick}</div><div class="pp">Lý thuyết <b>${pct(opts[sel][1], 2)}</b> · mô hình ${pct(opts[sel][2], 2)}<br>${pay}</div>` +
+      `<div class="opt head"><span></span><span></span><span class="n">Lý thuyết</span><span class="n">Mô hình</span></div>` +
+      opts.map((o, i) => `<div class="opt${i === sel ? " sel" : ""}"><span>${o[0]}</span><span class="bar"><i style="width:${(val(o) / max * 100).toFixed(1)}%"></i></span><span class="n">${pct(o[1], o[1] < 0.1 ? 2 : 1)}</span><span class="n">${o[2] != null ? pct(o[2], o[2] < 0.1 ? 2 : 1) : "–"}</span></div>`).join("") + `</div>`;
+  });
+  // Average prize returned per 10,000đ ticket, from the exact probabilities
+  const sumRtp = [3, 4, 5, 6, 7, 8, 9, 10].map(s => WAYS[s] * PAY_SUM[s] / 216 / STAKE);
+  const faceRtp = (75 * PAY_FACE[1] + 15 * PAY_FACE[2] + PAY_FACE[3]) / 216 / STAKE;
+  const rtp = [
+    ["Lớn hoặc Nhỏ", 81 * PAY_CAT[0] / 216 / STAKE], ["Hoà", 54 * PAY_CAT[1] / 216 / STAKE],
+    ["Cộng tổng", Math.min(...sumRtp), Math.max(...sumRtp)], ["Chọn 1 số", faceRtp],
+    ["Hai số trùng", P_PAIR * PAY_PAIR / STAKE], ["Ba số trùng (đúng số)", P_TRIPLE * PAY_TRIPLE / STAKE], ["Ba số trùng bất kỳ", P_TRIPLE_ANY * PAY_TRIPLE_ANY / STAKE],
+  ];
+  cards.push(`<div class="bet c2"><h3>💰 Mỗi vé 10.000đ trả lại trung bình</h3><div class="pp">Tính từ xác suất chính xác và cơ cấu giải của Vietlott. Dưới 100% nghĩa là đánh càng lâu càng lỗ.</div>` +
+    rtp.map(([l, a, b]) => `<div class="opt" style="grid-template-columns:1fr auto"><span>${l}</span><span class="n"><b>${b ? pct(a, 0) + "–" + pct(b, 0) : pct(a, 1)}</b></span></div>`).join("") + `</div>`);
+  $("bets").innerHTML = cards.join("");
+}
+
+// Next draw: if a pair / triple shows up, which face is it most likely to be
+function renderTwins(all, pr) {
+  const F = [1, 2, 3, 4, 5, 6], recent = all.slice(-100);
+  const since = test => { for (let i = all.length - 1; i >= 0; i--) if (test(all[i].d)) return all.length - 1 - i; return null; };
+  const ago = g => g === null ? "chưa thấy" : g === 0 ? "vừa ra kỳ trước" : `${g} kỳ trước`;
+  const box = (cls, title, best, line, rows, extra) => `<div class="pbox${cls}"><div class="ptitle">${title}</div><div class="pbig">${best}</div><p class="pnote" style="margin:0 0 10px;color:#555">${line}</p>` +
+    `<div class="tr"><table class="twin"><tr><th>Số</th><th>Khả năng ra<br><small>mô hình</small></th><th>Lý thuyết</th><th>Nếu ra trùng<br><small>thì là số này</small></th><th>Lần gần nhất</th><th>Trong 100 kỳ</th></tr>${rows}${extra || ""}</table></div></div>`;
+  const pairSum = F.reduce((a, f) => a + pr.pairP[f], 0), tripSum = F.reduce((a, f) => a + pr.tripP[f], 0);
+  const pairRows = F.map(f => `<tr${f === pr.pair ? ' class="total"' : ""}><td>${f === pr.pair ? "⭐ " : ""}${f}-${f}</td><td>${pct(pr.pairP[f], 2)}</td><td>7,41%</td><td>${pct(pr.pairP[f] / pairSum)}</td><td>${ago(since(d => cnt(d, f) >= 2))}</td><td>${recent.filter(x => cnt(x.d, f) >= 2).length} lần</td></tr>`).join("");
+  const tripRows = F.map(f => `<tr${f === pr.trip ? ' class="total"' : ""}><td>${f === pr.trip ? "⭐ " : ""}${f}-${f}-${f}</td><td>${pct(pr.tripP[f], 2)}</td><td>0,46%</td><td>${pct(pr.tripP[f] / tripSum)}</td><td>${ago(since(d => cnt(d, f) === 3))}</td><td>${recent.filter(x => cnt(x.d, f) === 3).length} lần</td></tr>`).join("");
+  const anyRow = `<tr><td>Bất kỳ</td><td>${pct(pr.tripAnyP, 2)}</td><td>2,78%</td><td>100%</td><td>${ago(since(d => distinct(d) === 1))}</td><td>${recent.filter(x => distinct(x.d) === 1).length} lần</td></tr>`;
+  $("twins").innerHTML =
+    box("", "👯 NẾU KỲ TỚI RA 2 SỐ TRÙNG", `${pr.pair}-${pr.pair}`,
+      `Khả năng kỳ tới có ít nhất hai số ${pr.pair}: <b>${pct(pr.pairP[pr.pair], 2)}</b> theo mô hình (lý thuyết 7,41%). Nếu kỳ tới có số trùng, khả năng đó là cặp ${pr.pair}-${pr.pair}: <b>${pct(pr.pairP[pr.pair] / pairSum)}</b> (lý thuyết 16,7%, số nào cũng như nhau). Khả năng kỳ tới có số trùng nói chung: 44,4%.`, pairRows) +
+    box(" blue", "🎲 NẾU KỲ TỚI RA 3 SỐ TRÙNG", `${pr.trip}-${pr.trip}-${pr.trip}`,
+      `Khả năng kỳ tới ra đúng ${pr.trip}-${pr.trip}-${pr.trip}: <b>${pct(pr.tripP[pr.trip], 2)}</b> theo mô hình (lý thuyết 0,46%, khoảng 1 lần mỗi 216 kỳ). Nếu kỳ tới ra bộ ba, khả năng là số ${pr.trip}: <b>${pct(pr.tripP[pr.trip] / tripSum)}</b> (lý thuyết 16,7%). Bộ ba bất kỳ: 2,78%.`, tripRows, anyRow);
+}
+
+function renderFaces(all, pr) {
+  const recent = all.slice(-100);
+  const lastSeen = Array(7).fill(-1); all.forEach((x, i) => x.d.forEach(v => lastSeen[v] = i));
+  $("faces").innerHTML = [1, 2, 3, 4, 5, 6].map(f => {
+    const c = recent.reduce((a, x) => a + cnt(x.d, f), 0), gap = all.length - 1 - lastSeen[f];
+    const tag = f === pr.face ? '<div class="ftag top">⭐ Gợi ý số này</div>' : pr.combo.includes(f) ? '<div class="ftag">Trong bộ gợi ý</div>' : '<div class="ftag none">&nbsp;</div>';
+    return `<div class="face${f === pr.face ? " best" : pr.combo.includes(f) ? " sel" : ""}"><span class="badge">${f}</span>${tag}<div class="c">${pct(pr.faceP[f])}</div><div class="g">mô hình · lý thuyết 42,1%</div><div class="g">${c} lần/100 kỳ gần nhất</div><div class="g">${gap === 0 ? "vừa ra kỳ trước" : gap + " kỳ đã ghi chưa ra"}</div></div>`;
+  }).join("");
+}
+
+function renderTrack(rows, pr) {
+  const next = picksOf(pr);
+  const live = rows.filter(r => liveKys.has(r.x.ky));
+  const rate = (list, i, fixed) => { const h = list.filter(r => (fixed ? FIXED[i] : r.picks[i]).t(r.x.d)).length; return list.length ? `${h}/${list.length} (${pct(h / list.length)})` : "–"; };
+  const expect = i => rows.length ? pct(rows.reduce((a, r) => a + r.picks[i].p, 0) / rows.length) : "–";
+  $("track").innerHTML = `<tr><th>Kiểu chơi</th><th>Mô hình đoán kỳ tới</th><th>Mô hình đã trúng</th><th>Đoán bừa sẽ trúng</th><th>Cố định đã trúng</th><th>Mô hình từ khi mở trang</th></tr>` +
+    next.map((p, i) => `<tr><td>${p.name}</td><td><b>${p.v}</b></td><td>${rate(rows, i)}</td><td>${expect(i)}</td><td>${FIXED[i].v}: ${rate(rows, i, true)}</td><td>${rate(live, i)}</td></tr>`).join("");
+}
+
+/* ---------- Daily scoreboard: predicted vs actual ---------- */
+let selDay = null, dayOpts = "", daySig = "";
+function pickDay(d) { selDay = d; daySig = ""; render(); }
+// Actual dice that are also in the predicted set (each predicted die matches at most once)
+function markHits(actual, pred) {
+  const left = [...pred];
+  return actual.map(v => { const i = left.indexOf(v); if (i >= 0) left.splice(i, 1); return `<span class="ball${i >= 0 ? " hit" : ""}">${v}</span>`; }).join("");
+}
+const hitRate = (h, n) => n ? `<b>${h}/${n}</b> (${pct(h / n)})` : "–";
+// Hits, expected hits and prize money per bet type, betting one 10,000đ ticket on every pick of every draw
+function score(rs) {
+  const h = FIXED.map((_, i) => rs.filter(r => r.picks[i].t(r.x.d)).length);
+  const e = FIXED.map((_, i) => rs.reduce((a, r) => a + r.picks[i].p, 0));
+  const w = FIXED.map((_, i) => rs.reduce((a, r) => a + r.picks[i].pay(r.x.d), 0));
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  return { n: rs.length, h, e, w, hit: sum(h), exp: sum(e), won: sum(w), staked: rs.length * NPICK * STAKE };
+}
+
+function renderDays(all, rows) {
+  // Undated draws take the date of the closest earlier dated draw
+  const dateOf = new Map(); let lastDate = "";
+  all.forEach(x => { if (x.date) lastDate = x.date; dateOf.set(x.ky, x.date || lastDate || "?"); });
+  const days = new Map(); // date -> { draws, rows }, in draw order
+  all.forEach(x => { const d = dateOf.get(x.ky); if (!days.has(d)) days.set(d, { draws: 0, rows: [] }); days.get(d).draws++; });
+  rows.forEach(r => days.get(dateOf.get(r.x.ky)).rows.push(r));
+  const list = [...days.keys()].reverse();
+  if (!days.has(selDay)) selDay = list[0];
+
+  const sig = [selDay, all.length, rows.length, all[all.length - 1].ky].join("|");
+  if (sig === daySig) return;
+  daySig = sig;
+  const fmtD = d => d.replace(/-/g, "/");
+  // Rebuilding the options closes an open dropdown, so only do it when they change
+  const opts = list.map(d => `<option value="${d}">${fmtD(d)} (${days.get(d).rows.length} kỳ)</option>`).join("");
+  if (opts !== dayOpts) { $("daySel").innerHTML = opts; dayOpts = opts; }
+  $("daySel").value = selDay;
+
+  const day = days.get(selDay), s = score(day.rows);
+  $("dayTiles").innerHTML = [
+    [s.n, `kỳ được chấm ngày ${fmtD(selDay)}` + (day.draws > s.n ? ` (${day.draws - s.n} kỳ ngay sau chỗ thiếu không chấm được)` : "")],
+    [`${s.hit}/${s.n * NPICK}`, `lượt đoán trúng (${NPICK} kiểu chơi × ${s.n} kỳ)`],
+    [s.n ? pct(s.hit / (s.n * NPICK)) : "–", `tỉ lệ trúng · đoán bừa ${s.n ? pct(s.exp / (s.n * NPICK)) : "–"}`],
+    [money(s.won - s.staked), `lời/lỗ nếu mỗi kỳ đặt 10.000đ cho mỗi kiểu (đặt ${vnd(s.staked)}, nhận ${vnd(s.won)})`],
+  ].map(([v, l]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+
+  $("dayStats").innerHTML = `<tr><th>Kiểu chơi</th><th>Số kỳ đoán trúng / tổng số kỳ</th><th>Đoán bừa sẽ trúng</th><th>Tiền đặt</th><th>Tiền thắng</th><th>Lời / lỗ</th></tr>` +
+    FIXED.map((p, i) => `<tr><td>${p.name}</td><td>${hitRate(s.h[i], s.n)}</td><td>${s.n ? pct(s.e[i] / s.n, 2) : "–"}</td><td>${vnd(s.n * STAKE)}</td><td>${vnd(s.w[i])}</td><td>${money(s.w[i] - s.n * STAKE)}</td></tr>`).join("") +
+    `<tr class="total"><td>Tổng tất cả lượt đoán</td><td>${hitRate(s.hit, s.n * NPICK)}</td><td>${s.n ? pct(s.exp / (s.n * NPICK)) : "–"}</td><td>${vnd(s.staked)}</td><td>${vnd(s.won)}</td><td>${money(s.won - s.staked)}</td></tr>`;
+
+  const vs = (guess, real, ok) => `${guess} → ${real} ${tick(ok)}`;
+  $("dayLog").innerHTML = `<tr><th>Kỳ</th><th>Bộ số gợi ý</th><th>Kết quả thực tế</th><th>Lớn/Hoà/Nhỏ<br><small>đoán → ra</small></th><th>Cộng tổng<br><small>đoán → ra</small></th><th>Chọn 1 số</th><th>Hai số trùng</th><th>Ba số trùng</th><th>Trúng</th><th>Lời / lỗ</th></tr>` +
+    (day.rows.length ? day.rows.slice().reverse().map(r => {
+      const d = r.x.d, t = sumD(d), pr = r.pr, ok = r.picks.map(p => p.t(d));
+      const won = r.picks.reduce((a, p) => a + p.pay(d), 0), nf = cnt(d, pr.face);
+      return `<tr><td>#${r.x.ky}${liveKys.has(r.x.ky) ? " 🟢" : ""}</td><td>${balls(pr.combo)}</td><td>${markHits(d, pr.combo)}</td>` +
+        `<td>${vs(CAT[pr.cat], CAT[catIdx(t)], ok[0])}</td><td>${vs(pr.sum, t, ok[1])}</td>` +
+        `<td>${pr.face} ${tick(ok[2])}${nf > 1 ? ` <small>(${nf} con)</small>` : ""}</td><td>${r.picks[3].v} ${tick(ok[3])}</td><td>${r.picks[4].v} ${tick(ok[4])}</td>` +
+        `<td><b>${ok.filter(Boolean).length}/${NPICK}</b></td><td>${money(won - NPICK * STAKE)}</td></tr>`;
+    }).join("") : `<tr><td colspan="10">Chưa có kỳ nào được chấm trong ngày này</td></tr>`);
+
+  const cell = (h, n) => n ? `${h} (${pct(h / n, 0)})` : "–";
+  const line = (label, s, cls, attr) => `<tr class="${cls}"${attr}><td>${label}</td><td>${s.n}</td>${s.h.map(h => `<td>${cell(h, s.n)}</td>`).join("")}<td>${hitRate(s.hit, s.n * NPICK)}</td><td>${s.n ? pct(s.exp / (s.n * NPICK)) : "–"}</td><td>${money(s.won - s.staked)}</td></tr>`;
+  $("daysAll").innerHTML = `<tr><th>Ngày</th><th>Số kỳ</th>${FIXED.map(p => `<th>${p.name}</th>`).join("")}<th>Tổng lượt trúng</th><th>Đoán bừa</th><th>Lời / lỗ</th></tr>` +
+    list.map(d => line(fmtD(d), score(days.get(d).rows), "pick" + (d === selDay ? " cur" : ""), ` onclick="pickDay('${d}')"`)).join("") +
+    line("Tất cả các ngày", score(rows), "total", "");
+}
+
+function renderModel(all) {
+  const n = all.length;
+  const faces = Array(6).fill(0); all.forEach(x => x.d.forEach(v => faces[v - 1]++));
+  const sc = Array(16).fill(0); all.forEach(x => sc[sumD(x.d) - 3]++);
+  const types = [3, 2, 1].map(k => all.filter(x => distinct(x.d) === k).length);
+  const m = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; let pairs = 0;
+  for (let i = 1; i < n; i++) if (all[i].ky === all[i - 1].ky + 1) { m[catIdx(sumD(all[i - 1].d))][catIdx(sumD(all[i].d))]++; pairs++; }
+  const tests = [
+    ["6 mặt ra đều", chiGOF(faces, Array(6).fill(1 / 6))],
+    ["Phân phối tổng", chiGOF(sc, Array.from({ length: 16 }, (_, i) => WAYS[i + 3] / 216))],
+    ["Khác nhau / đôi / bộ ba", chiGOF(types, [120 / 216, 90 / 216, 6 / 216])],
+    [`Kỳ trước → kỳ sau (${pairs} cặp)`, chiIndep(m)],
+  ];
+  const ok = tests.every(([, p]) => p >= 0.05 / tests.length);
+  $("modelText").innerHTML = ok
+    ? `✅ <b>Trên ${n} kỳ, chưa thấy kỳ trước ảnh hưởng kỳ sau.</b> Vì vậy dự đoán của mô hình theo lịch sử dự kiến trúng ngang dự đoán cố định. Nếu sau này kiểm định cuối cùng chuyển sang ⚠️, mô hình mới có lợi thế thật.`
+    : `⚠️ <b>Có kiểm định đang lệch</b> (p &lt; 0,0125). Có thể chỉ do ít dữ liệu; nếu lệch kéo dài qua nhiều kỳ thì mô hình theo lịch sử mới có cơ sở.`;
+  $("model").innerHTML = tests.map(([l, p]) => `<span class="mchip">${p < 0.0125 ? "⚠️" : "✅"} ${l}: p = ${fmtP(p)}</span>`).join("");
+}
+
+function render() {
+  const all = sorted(), n = all.length;
+  if (n < 2) return;
+  const last = all[n - 1], s = sumD(last.d), ci = catIdx(s);
+  const rows = backtest(all), pr = predictAt(all, n);
+  const lastRow = rows.length && rows[rows.length - 1].x.ky === last.ky ? rows[rows.length - 1] : null;
+  $("latest").innerHTML = `<span class="lbl">Kỳ vừa ra #${last.ky}</span>${last.d.map(v => `<span class="bigdice sm">${v}</span>`).join("")}<span class="lbl">Tổng ${s}</span><span class="bt ${CATCLS[ci]}">${CAT[ci]}</span>` +
+    (lastRow ? `<span style="color:#666;font-size:.88rem">Mô hình đã đoán: ${lastRow.picks.slice(0, 3).map(p => `${p.v} ${tick(p.t(last.d))}`).join(" · ")}</span>` : "");
+  renderPrediction(all, Math.max(last.ky + 1, inProgress || 0), pr);
+  renderBets(pr);
+  renderTwins(all, pr);
+  renderFaces(all, pr);
+  renderTrack(rows, pr);
+  renderDays(all, rows);
+  renderModel(all);
+  $("hist").innerHTML = `<tr><th>Kỳ</th><th>Ngày</th><th>Kết quả</th><th>Tổng</th><th>Lớn/Hoà/Nhỏ</th><th>Số trùng</th></tr>` +
+    all.slice(-60).reverse().map(x => { const t = sumD(x.d), c = catIdx(t), k = distinct(x.d);
+      return `<tr><td>#${x.ky}</td><td>${(x.date || "").replace(/-/g, "/")}</td><td>${balls(x.d)}</td><td><b>${t}</b></td><td><span class="bt ${CATCLS[c]}">${CAT[c]}</span></td><td>${k === 3 ? "–" : k === 2 ? "Hai số " + x.d.find(v => cnt(x.d, v) === 2) : "<b>Ba số " + x.d[0] + "</b>"}</td></tr>`; }).join("");
+  $("foot").textContent = `Dữ liệu: ${n} kỳ (${liveKys.size} kỳ thu trực tiếp từ khi mở trang). ` + (HOSTED
+    ? `Nguồn xosohomnay.com, kèm dữ liệu từ xosohomnay.com và vietlott.vn tự cập nhật khoảng 5–10 phút một lần${dataUpdated ? " (lần gần nhất " + new Date(dataUpdated).toLocaleTimeString("vi-VN") + ")" : ""}.`
+    : "Nguồn xosohomnay.com, tự chuyển sang vietlott.vn khi xosohomnay.com lỗi (cần mở bằng Mo-Bingo18.bat). Kỳ mới chỉ được lưu khi trang đang mở.");
+}
+
+/* ---------- Live polling ---------- */
+// Missed draws come from the local helper (bingo18-server.js) or, online, from data.json
+const BACKFILL_WINDOW = 200, BACKFILL_PER_POLL = 3, DATA_EVERY_MS = 60000;
+let backfilling = false, dataAt = 0, dataUpdated = null;
+const notFound = new Set(); // draws the source has no page for; not retried
+async function backfill() {
+  if (!(LOCAL || HOSTED) || backfilling) return;
+  backfilling = true;
+  let added = 0;
+  const findMissing = () => {
+    const top = Math.max(...draws.keys(), (inProgress || 0) - 1), out = [];
+    for (let k = top; k > top - BACKFILL_WINDOW && out.length < BACKFILL_PER_POLL; k--) if (!draws.has(k) && !notFound.has(k)) out.push(k);
+    return out;
+  };
+  try {
+    if (HOSTED) {
+      if (Date.now() - dataAt >= DATA_EVERY_MS) {
+        dataAt = Date.now();
+        const r = await fetch(`data.json?_=${Date.now()}`, { cache: "no-store" });
+        if (r.ok) { const o = await r.json(); dataUpdated = o.updated; o.draws.forEach(x => { if (put(x[0], [x[1], x[2], x[3]], x[4])) added++; }); }
+      }
+    } else if (findMissing().length) {
+      // Only touch the source site when something is actually missing
+      const r = await fetch("/api/recent", { cache: "no-store" });
+      if (r.ok) (await r.json()).forEach(x => { if (put(x[0], [x[1], x[2], x[3]], x[4])) added++; });
+      for (const k of findMissing()) {
+        const q = await fetch(`/api/ky/${k}`, { cache: "no-store" });
+        if (q.ok) { const x = await q.json(); if (put(x[0], [x[1], x[2], x[3]], x[4])) added++; }
+        else if (q.status === 404) notFound.add(k);
+      }
+    }
+  } catch (e) { /* helper offline: retry on next poll */ }
+  backfilling = false;
+  if (added) { predCache.clear(); save(); render(); }
+}
+
+async function poll() {
+  try {
+    const res = await fetch(LOCAL ? `/api/live?_=${Date.now()}` : `${API}&_=${Date.now()}`, { cache: "no-store", credentials: "omit" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const o = await res.json();
+    const d = Array.isArray(o["1"]) ? o["1"].map(Number) : [];
+    const valid = o.lv && d.length === 3 && d.every(v => v >= 1 && v <= 6);
+    if (valid) {
+      inProgress = null;
+      if (put(+o.lv, d, o.date || "")) { liveKys.add(+o.lv); save(); }
+      $("st").textContent = `Đang theo dõi trực tiếp · kỳ mới nhất #${o.lv}` + (o.source === "vietlott" ? " · nguồn vietlott.vn (xosohomnay.com đang lỗi)" : ""); $("dot").style.background = "#4caf50";
+    } else {
+      inProgress = +o.lv || null;
+      $("st").textContent = o.lv ? `Kỳ #${o.lv} đang quay…` : "Ngoài giờ quay (Bingo18 quay 06:00–21:53 mỗi ngày)"; $("dot").style.background = "#ff9800";
+    }
+    render();
+  } catch (e) {
+    $("st").textContent = HOSTED ? `xosohomnay.com đang lỗi (${e.message}), đang dùng dữ liệu tự cập nhật 5–10 phút một lần` : `Mất kết nối API (${e.message}), tự thử lại sau 3 giây`; $("dot").style.background = "#d32f2f";
+  }
+  $("upd").textContent = "Cập nhật: " + new Date().toLocaleTimeString("vi-VN");
+  backfill();
+}
+
+load();
+render();
+poll();
+setInterval(poll, POLL_MS);
+// Background tabs get throttled by the browser: refresh as soon as the tab is visible again
+document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+</script>
+</body>
+</html>
