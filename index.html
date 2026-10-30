@@ -95,7 +95,12 @@ tr.total td{background:#fff8e1;font-weight:700}
 .twin td:first-child{white-space:nowrap}
 /* Grid children default to min-width:auto, which lets wide tables push the page past the screen */
 .pw>*,.grid3>*,.tiles>*{min-width:0}
-@media (max-width:600px){body{padding:6px}.container{padding:14px 10px;border-radius:10px}h1{font-size:1.45rem}.pbig{font-size:2rem}.status-bar{padding:10px 12px}.bigdice{width:46px;height:46px;font-size:1.5rem}.sec{font-size:1.1rem}}
+@media (max-width:600px){body{padding:6px}.container{padding:14px 10px;border-radius:10px}h1{font-size:1.45rem}.pbig{font-size:2rem}.status-bar{padding:10px 12px}.bigdice{width:46px;height:46px;font-size:1.5rem}.sec{font-size:1.1rem}
+  th,td{padding:7px 5px;font-size:.78rem}
+  /* Keep cells on one line; the wrapping .tr box scrolls sideways instead */
+  #track td,#dayStats td,#hist td{white-space:nowrap}
+  #hist .ball{width:20px;height:20px;line-height:17px;font-size:.75rem;margin:0 1px}
+  .face{padding:8px 4px}.ftag.top{padding:1px 6px;font-size:.7rem;white-space:nowrap}.face .g{font-size:.72rem}}
 #dayLog td,#dayLog th,#daysAll td{white-space:nowrap;padding:7px 8px;font-size:.84rem}
 #dayLog .ball{width:22px;height:22px;line-height:19px;font-size:.8rem;margin:0 1px}
 </style>
