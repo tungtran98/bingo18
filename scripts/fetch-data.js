@@ -37,21 +37,22 @@ async function vietlott() {
 }
 async function previous() {
   if (!PREV) return [];
-  return JSON.parse(await get(`${PREV}?_=${Date.now()}`)).draws;
+  try { return JSON.parse(await get(`${PREV}?_=${Date.now()}`)).draws; }
+  catch (e) { if (/HTTP 404/.test(e.message)) return []; throw e; } // 404 = first publish
 }
 
 (async () => {
-  const sources = { previous: previous(), today: xosohomnay(dayVN()), yesterday: xosohomnay(dayVN(-1)), vietlott: vietlott() };
+  // Settle every source up front: a source failing must not stop the others
+  const names = ["previous", "today", "yesterday", "vietlott"];
+  const results = await Promise.allSettled([previous(), xosohomnay(dayVN()), xosohomnay(dayVN(-1)), vietlott()]);
   const draws = new Map();
-  for (const [name, p] of Object.entries(sources)) {
-    try {
-      const rows = await p;
-      rows.forEach(r => { if (!draws.has(r[0]) || name !== "previous") draws.set(r[0], r); });
-      console.log(`${name}: ${rows.length} draws`);
-    } catch (e) {
-      console.log(`${name}: failed (${e.message})`);
-    }
-  }
+  results.forEach((res, i) => {
+    if (res.status === "rejected") return console.log(`${names[i]}: failed (${res.reason.message})`);
+    res.value.forEach(r => draws.set(r[0], r));
+    console.log(`${names[i]}: ${res.value.length} draws`);
+  });
+  // Publishing without the old history (or with nothing) would wipe what the page relies on: keep the live site instead
+  if (results[0].status === "rejected" || !draws.size) { console.log("not publishing: history unavailable"); process.exit(1); }
   const list = [...draws.values()].sort((a, b) => a[0] - b[0]).slice(-MAX_DRAWS);
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), draws: list }));
