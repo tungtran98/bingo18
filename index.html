@@ -81,7 +81,7 @@ tr:hover td{background:#f1f5f9}
 .note{font-size:.85rem;color:#888;margin-top:14px;text-align:center}
 .dayhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-weight:600}
 .dayhead select{margin-left:6px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;font-weight:600;color:var(--ink)}
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
 @media (max-width:700px){.tiles{grid-template-columns:1fr 1fr}}
 .tile{background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
 .tile .v{font-size:1.6rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums}
@@ -452,7 +452,7 @@ function score(rs) {
   const e = FIXED.map((_, i) => rs.reduce((a, r) => a + r.picks[i].p, 0));
   const w = FIXED.map((_, i) => rs.reduce((a, r) => a + r.picks[i].pay(r.x.d), 0));
   const sum = a => a.reduce((x, y) => x + y, 0);
-  return { n: rs.length, h, e, w, hit: sum(h), exp: sum(e), won: sum(w), staked: rs.length * NPICK * STAKE };
+  return { n: rs.length, h, e, w, won: sum(w), staked: rs.length * NPICK * STAKE };
 }
 
 function renderDays(all, rows) {
@@ -477,29 +477,27 @@ function renderDays(all, rows) {
   const day = days.get(selDay), s = score(day.rows);
   $("dayTiles").innerHTML = [
     [s.n, `kỳ được chấm ngày ${fmtD(selDay)}` + (day.draws > s.n ? ` (${day.draws - s.n} kỳ ngay sau chỗ thiếu không chấm được)` : "")],
-    [`${s.hit}/${s.n * NPICK}`, `lượt đoán trúng (${NPICK} kiểu chơi × ${s.n} kỳ)`],
-    [s.n ? pct(s.hit / (s.n * NPICK)) : "–", `tỉ lệ trúng · đoán bừa ${s.n ? pct(s.exp / (s.n * NPICK)) : "–"}`],
-    [money(s.won - s.staked), `lời/lỗ nếu mỗi kỳ đặt 10.000đ cho mỗi kiểu (đặt ${vnd(s.staked)}, nhận ${vnd(s.won)})`],
+    ...FIXED.map((p, i) => [s.n ? pct(s.h[i] / s.n) : "–", `<b>${p.name}</b>: trúng ${s.h[i]}/${s.n} kỳ · đoán bừa ${s.n ? pct(s.e[i] / s.n) : "–"}`]),
   ].map(([v, l]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 
   $("dayStats").innerHTML = `<tr><th>Kiểu chơi</th><th>Số kỳ đoán trúng / tổng số kỳ</th><th>Đoán bừa sẽ trúng</th><th>Tiền đặt</th><th>Tiền thắng</th><th>Lời / lỗ</th></tr>` +
     FIXED.map((p, i) => `<tr><td>${p.name}</td><td>${hitRate(s.h[i], s.n)}</td><td>${s.n ? pct(s.e[i] / s.n, 2) : "–"}</td><td>${vnd(s.n * STAKE)}</td><td>${vnd(s.w[i])}</td><td>${money(s.w[i] - s.n * STAKE)}</td></tr>`).join("") +
-    `<tr class="total"><td>Tổng tất cả lượt đoán</td><td>${hitRate(s.hit, s.n * NPICK)}</td><td>${s.n ? pct(s.exp / (s.n * NPICK)) : "–"}</td><td>${vnd(s.staked)}</td><td>${vnd(s.won)}</td><td>${money(s.won - s.staked)}</td></tr>`;
+    `<tr class="total"><td>Cộng tiền nếu đánh cả 5 kiểu</td><td></td><td></td><td>${vnd(s.staked)}</td><td>${vnd(s.won)}</td><td>${money(s.won - s.staked)}</td></tr>`;
 
   const vs = (guess, real, ok) => `${guess} → ${real} ${tick(ok)}`;
-  $("dayLog").innerHTML = `<tr><th>Kỳ</th><th>Bộ số gợi ý</th><th>Kết quả thực tế</th><th>Lớn/Hoà/Nhỏ<br><small>đoán → ra</small></th><th>Cộng tổng<br><small>đoán → ra</small></th><th>Chọn 1 số</th><th>Hai số trùng</th><th>Ba số trùng</th><th>Trúng</th><th>Lời / lỗ</th></tr>` +
+  $("dayLog").innerHTML = `<tr><th>Kỳ</th><th>Bộ số gợi ý</th><th>Kết quả thực tế</th><th>Lớn/Hoà/Nhỏ<br><small>đoán → ra</small></th><th>Cộng tổng<br><small>đoán → ra</small></th><th>Chọn 1 số</th><th>Hai số trùng</th><th>Ba số trùng</th><th>Lời / lỗ<br><small>5 vé</small></th></tr>` +
     (day.rows.length ? day.rows.slice().reverse().map(r => {
       const d = r.x.d, t = sumD(d), pr = r.pr, ok = r.picks.map(p => p.t(d));
       const won = r.picks.reduce((a, p) => a + p.pay(d), 0), nf = cnt(d, pr.face);
       return `<tr><td>#${r.x.ky}${liveKys.has(r.x.ky) ? " 🟢" : ""}</td><td>${balls(pr.combo)}</td><td>${markHits(d, pr.combo)}</td>` +
         `<td>${vs(CAT[pr.cat], CAT[catIdx(t)], ok[0])}</td><td>${vs(pr.sum, t, ok[1])}</td>` +
         `<td>${pr.face} ${tick(ok[2])}${nf > 1 ? ` <small>(${nf} con)</small>` : ""}</td><td>${r.picks[3].v} ${tick(ok[3])}</td><td>${r.picks[4].v} ${tick(ok[4])}</td>` +
-        `<td><b>${ok.filter(Boolean).length}/${NPICK}</b></td><td>${money(won - NPICK * STAKE)}</td></tr>`;
-    }).join("") : `<tr><td colspan="10">Chưa có kỳ nào được chấm trong ngày này</td></tr>`);
+        `<td>${money(won - NPICK * STAKE)}</td></tr>`;
+    }).join("") : `<tr><td colspan="9">Chưa có kỳ nào được chấm trong ngày này</td></tr>`);
 
-  const cell = (h, n) => n ? `${h} (${pct(h / n, 0)})` : "–";
-  const line = (label, s, cls, attr) => `<tr class="${cls}"${attr}><td>${label}</td><td>${s.n}</td>${s.h.map(h => `<td>${cell(h, s.n)}</td>`).join("")}<td>${hitRate(s.hit, s.n * NPICK)}</td><td>${s.n ? pct(s.exp / (s.n * NPICK)) : "–"}</td><td>${money(s.won - s.staked)}</td></tr>`;
-  $("daysAll").innerHTML = `<tr><th>Ngày</th><th>Số kỳ</th>${FIXED.map(p => `<th>${p.name}</th>`).join("")}<th>Tổng lượt trúng</th><th>Đoán bừa</th><th>Lời / lỗ</th></tr>` +
+  const cell = (h, n) => n ? `${h}/${n} (${pct(h / n, 0)})` : "–";
+  const line = (label, s, cls, attr) => `<tr class="${cls}"${attr}><td>${label}</td><td>${s.n}</td>${s.h.map(h => `<td>${cell(h, s.n)}</td>`).join("")}<td>${money(s.won - s.staked)}</td></tr>`;
+  $("daysAll").innerHTML = `<tr><th>Ngày</th><th>Số kỳ</th>${FIXED.map(p => `<th>${p.name}</th>`).join("")}<th>Lời / lỗ<br><small>5 vé/kỳ</small></th></tr>` +
     list.map(d => line(fmtD(d), score(days.get(d).rows), "pick" + (d === selDay ? " cur" : ""), ` onclick="pickDay('${d}')"`)).join("") +
     line("Tất cả các ngày", score(rows), "total", "");
 }
