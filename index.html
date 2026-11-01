@@ -407,14 +407,6 @@ const HOT_WINDOW = 160;
 const prevD = (all, i) => all[i - 1].d;
 // Each method: pick(L, C, all, i, pr) -> value; i is the index of the draw being predicted
 const LEARN_TYPES = [
-  { key: "cat", name: "Lớn / Hoà / Nhỏ", hit: (v, d) => catIdx(sumD(d)) === v, show: v => CAT[v], methods: [
-    { name: "Mô hình Markov (theo cửa kỳ trước)", pick: (L, C, all, i, pr) => pr.model.cat },
-    { name: "Luôn đánh Lớn", pick: () => 2, fixed: true },
-    { name: "Luôn đánh Nhỏ", pick: () => 0, fixed: true },
-    { name: "Cửa ra nhiều nhất 160 kỳ gần", pick: L => bestOf([0, 1, 2], c => L.hot.cat[c] + PCAT[c]) },
-    { name: "Lặp lại cửa kỳ trước", pick: (L, C, all, i) => catIdx(sumD(prevD(all, i))) },
-    { name: "Cửa vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf([0, 1, 2], c => (i - L.last.cat[c]) * PCAT[c]) },
-  ] },
   { key: "sum", name: "Cộng tổng", hit: (v, d) => sumD(d) === v, show: String, methods: [
     { name: "Tổng hay ra nhất trong cửa dự đoán (cách cũ)", pick: (L, C, all, i, pr) => pr.model.sum },
     { name: "Theo tổng kỳ trước (Markov, mọi tổng)", pick: (L, C, all, i) => { const ps = sumD(prevD(all, i)); return bestOf(SUMS, s => (C.sum[ps][s] + K_SUM * PS(s)) / (C.nSum[ps] + K_SUM)); } },
@@ -423,6 +415,16 @@ const LEARN_TYPES = [
     { name: "Tổng vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf(SUMS, s => (i - L.last.sum[s]) * PS(s)) },
     { name: "Luôn đánh 10", pick: () => 10, fixed: true },
     { name: "Luôn đánh 11", pick: () => 11, fixed: true },
+  ] },
+  { key: "cat", name: "Lớn / Hoà / Nhỏ", hit: (v, d) => catIdx(sumD(d)) === v, show: v => CAT[v], methods: [
+    // Chosen by the user: the category always matches the total picked for the "Cộng tổng" ticket
+    { name: "Theo cửa của Cộng tổng đang dùng", pick: (L, C, all, i, pr) => catIdx(pr.sel.sum), forced: true },
+    { name: "Mô hình Markov (theo cửa kỳ trước)", pick: (L, C, all, i, pr) => pr.model.cat },
+    { name: "Luôn đánh Lớn", pick: () => 2, fixed: true },
+    { name: "Luôn đánh Nhỏ", pick: () => 0, fixed: true },
+    { name: "Cửa ra nhiều nhất 160 kỳ gần", pick: L => bestOf([0, 1, 2], c => L.hot.cat[c] + PCAT[c]) },
+    { name: "Lặp lại cửa kỳ trước", pick: (L, C, all, i) => catIdx(sumD(prevD(all, i))) },
+    { name: "Cửa vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf([0, 1, 2], c => (i - L.last.cat[c]) * PCAT[c]) },
   ] },
   { key: "face", name: "Chọn 1 số", hit: (v, d) => d.includes(v), show: String, methods: [
     { name: "Mô hình Markov (theo cửa kỳ trước)", pick: (L, C, all, i, pr) => pr.model.face },
@@ -444,7 +446,7 @@ const LEARN_TYPES = [
     { name: "Luôn đánh 6-6-6", pick: () => 6, fixed: true },
   ] },
 ];
-const SUM_METHODS = LEARN_TYPES[1].methods;
+const SUM_METHODS = LEARN_TYPES.find(t => t.key === "sum").methods;
 
 function newLearner() {
   const T = LEARN_TYPES.map(t => { const z = () => t.methods.map(() => 0); return { hits: z(), run: z(), maxRun: z(), use: 0, switches: [], byDay: {}, picks: null }; });
@@ -462,7 +464,8 @@ function learnPick(L, C, all, i, pr, date) {
     const S = L.T[ti];
     if (newDay) {
       // Constant picks (always the same number) are never used, only shown for comparison
-      const best = S.hits.reduce((b, h, k) => !t.methods[k].fixed && (t.methods[b].fixed || h > S.hits[b]) ? k : b, 0);
+      const forced = t.methods.findIndex(m => m.forced);
+      const best = forced >= 0 ? forced : S.hits.reduce((b, h, k) => !t.methods[k].fixed && (t.methods[b].fixed || h > S.hits[b]) ? k : b, 0);
       if (best !== S.use || !S.switches.length) S.switches.push({ day: date, from: S.switches.length ? S.use : null, use: best, rate: L.n ? S.hits[best] / L.n : null });
       S.use = best;
     }
@@ -541,7 +544,7 @@ function renderLearn() {
     LEARN_TYPES.map((t, ti) => {
       const S = L.T[ti], today = S.byDay[L.day], prev = prevDay && S.byDay[prevDay], dp = t.key === "trip" ? 2 : 1;
       const order = t.methods.map((m, k) => k).sort((a, b) => S.hits[b] - S.hits[a]);
-      return `<tr class="lgrp"><td colspan="6">${t.name}</td></tr>` + order.map(k => `<tr${k === S.use ? ' class="total"' : ""}><td style="text-align:left">${k === S.use ? "⭐ " : ""}${t.methods[k].name}${k === S.use ? " <small>(đang dùng)</small>" : t.methods[k].fixed ? " <small style=\"color:#999\">(mốc so sánh, không dùng)</small>" : ""}</td>` +
+      return `<tr class="lgrp"><td colspan="6">${t.name}</td></tr>` + order.map(k => `<tr${k === S.use ? ' class="total"' : ""}><td style="text-align:left">${k === S.use ? "⭐ " : ""}${t.methods[k].name}${k === S.use ? (t.methods[k].forced ? " <small>(đang dùng theo lựa chọn của bạn)</small>" : " <small>(đang dùng)</small>") : t.methods[k].fixed ? " <small style=\"color:#999\">(mốc so sánh, không dùng)</small>" : ""}</td>` +
         `<td><b>${t.show(S.picks[k])}</b></td><td>${rate(S.hits[k], L.n, dp)}</td><td>${prev ? rate(prev.hits[k], prev.n, dp) : "–"}</td><td>${today ? rate(today.hits[k], today.n, dp) : "–"}</td><td>${S.maxRun[k]} · ${S.run[k]}</td></tr>`).join("");
     }).join("");
 
@@ -636,10 +639,10 @@ function renderPrediction(all, nextKy, pr) {
   $("pCat").textContent = CAT[pr.cat].toUpperCase();
   $("pCatTags").innerHTML = [`Trúng nhận ${vnd(PAY_CAT[pr.cat])} / vé 10.000đ`].map(t => `<span class="tag">${t}</span>`).join("");
   $("pCatNote").innerHTML = `Kỳ #${pr.prevKy} ra <b>${CAT[pr.prevCat]}</b> (tổng ${pr.prevSum}). Trong lịch sử có ${pr.nCat} lần kỳ trước ra ${CAT[pr.prevCat]}; mô hình Markov ước tính kỳ sau: ` +
-    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Gợi ý ${CAT[pr.cat]} theo cách "${LEARN_TYPES[0].methods[pr.meth.cat].name}", cách đang trúng nhiều nhất (trang tự chọn lại mỗi ngày).`;
+    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Cửa ở đây <b>đi theo Cộng tổng ${pr.sumPick}</b> ở ô bên phải (${pr.sumPick} thuộc cửa ${CAT[pr.cat]}), để hai vé luôn khớp nhau. Đổi lại, khi tổng gợi ý là 10 hoặc 11 thì vé cửa là Hoà, trúng khoảng 25% thay vì 37,5% của Lớn hoặc Nhỏ.`;
   $("pDice").innerHTML = pr.combo.map(v => `<span class="bigdice">${v}</span>`).join("");
   $("pDiceTags").innerHTML = [`Cộng tổng: ${pr.sumPick}`, `Chọn 1 số: ${pr.face}`, `Hai số trùng: ${pr.pair}-${pr.pair}`, `Ba số trùng: ${pr.trip}-${pr.trip}-${pr.trip}`].map(t => `<span class="tag">${t}</span>`).join("");
-  $("pDiceNote").textContent = `Mỗi kiểu chơi là một vé riêng nên được chọn riêng, theo cách đang trúng nhiều nhất của kiểu đó. Vì vậy Cộng tổng (${pr.sumPick}, thuộc cửa ${CAT[catIdx(pr.sumPick)]}) có thể khác cửa ở ô bên cạnh: tổng 10 và 11 ra nhiều nhất (12,5%) nhưng thuộc Hoà, còn vé cửa thì Lớn hoặc Nhỏ trúng nhiều hơn Hoà (37,5% so với 25%). Bộ 3 số trên chỉ để minh hoạ một kết quả có tổng ${pr.sumPick}. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
+  $("pDiceNote").textContent = `Cộng tổng ${pr.sumPick} theo cách "${SUM_METHODS[pr.sumMethod].name}", cách đang trúng nhiều nhất (trang tự chọn lại mỗi ngày); cửa ở ô bên trái đi theo tổng này. Bộ 3 số trên chỉ để minh hoạ một kết quả có tổng ${pr.sumPick}. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
   $("honest").innerHTML = `⚠️ <b>Đọc trước khi đánh:</b> dự đoán đổi theo từng kỳ, dựa trên mô hình Markov: sau những kỳ giống kỳ vừa ra, kỳ kế tiếp trong lịch sử hay ra gì nhất (có làm mượt để tránh bị lệch do ít dữ liệu). ` +
     `Hiện kiểm định chưa thấy kỳ trước ảnh hưởng kỳ sau, nên cơ hội trúng thật vẫn bằng xác suất lý thuyết. Theo cơ cấu giải của Vietlott, mỗi vé 10.000đ chỉ trả lại trung bình 5.000–5.700đ, nên đánh lâu dài chắc chắn lỗ. Hãy đặt ít.`;
 }
