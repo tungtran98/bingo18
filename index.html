@@ -139,6 +139,32 @@ tr.total td{background:#fff8e1;font-weight:700}
 .wtools label.capin{max-width:220px}
 .btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary)}
 .btn.ghost:hover{background:#fff5f5}
+/* Betting board, used only to record tickets already bought */
+.bd{background:linear-gradient(#1d6b45,#0f3d27);border-radius:14px;padding:10px 8px 8px;color:#fff;-webkit-user-select:none;user-select:none}
+.bd h4{margin:12px 0 6px;text-align:center;font-size:.86rem;font-weight:700;color:#e8f5e9}
+.bd h4 small{color:#ffd54f;font-weight:600;margin-left:4px}
+.brow{display:grid;gap:4px;margin-bottom:4px}
+.brow.c3{grid-template-columns:repeat(3,1fr)}.brow.c8{grid-template-columns:repeat(8,1fr)}.brow.c7{grid-template-columns:repeat(7,1fr)}.brow.c6{grid-template-columns:repeat(6,1fr)}
+.cell{position:relative;min-width:0;background:#f4e4c1;color:#0f3d27;border:2px solid transparent;border-radius:7px;padding:6px 1px 5px;text-align:center;cursor:pointer;touch-action:manipulation;transition:transform .08s}
+.cell:active{transform:scale(.95)}
+.cell .n{font-size:1.35rem;font-weight:900;line-height:1.1;font-family:Georgia,'Times New Roman',serif}
+.cell .x{font-size:.66rem;opacity:.85;white-space:nowrap}
+.cell.big{background:linear-gradient(#2f8a58,#1d6b45);color:#fff;border-color:#5cb87f;padding:10px 2px 8px}
+.cell.big .n{font-size:1.45rem;letter-spacing:1px}
+.cell.big.hoa .n{color:#ffd54f}
+.cell.dk{background:#21704a;color:#fff;border-color:#2f8a58;padding:8px 1px}
+.cell.on{border-color:#ffb300;box-shadow:inset 0 0 0 1px #ffb300,0 0 8px rgba(255,179,0,.6)}
+.mb{display:inline-block;width:17px;height:17px;line-height:17px;border-radius:50%;background:#f57c00;color:#fff;font-size:.66rem;font-weight:800;margin:1px}
+.chip{position:absolute;left:1px;bottom:1px;min-width:24px;height:24px;line-height:20px;padding:0 3px;border-radius:12px;background:#ffb300;color:#3e2723;border:2px dashed #fff;font-size:.6rem;font-weight:900;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.chipbtn{border:2px dashed #fff;background:#ffb300;color:#3e2723;border-radius:20px;padding:6px 12px;font-weight:900;font-size:.85rem;cursor:pointer;opacity:.6;touch-action:manipulation}
+.chipbtn.erase{background:#eceff1;border-style:solid}
+.chipbtn.sel{opacity:1;box-shadow:0 0 0 3px #fff}
+.bdbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;background:#fff;color:var(--ink);border-radius:10px;padding:8px 10px;font-size:.88rem}
+.bdbar .bdbtn{display:flex;gap:8px}
+.wmore{margin:12px 0 4px}
+.wmore summary{cursor:pointer;font-weight:600;color:var(--primary);margin-bottom:10px}
+@media (max-width:600px){.cell .n{font-size:1.1rem}.cell.big .n{font-size:1.2rem}.cell .x{font-size:.58rem}.mb{width:14px;height:14px;line-height:14px;font-size:.56rem;margin:0}.chip{min-width:20px;height:20px;line-height:16px;font-size:.52rem}}
 @media (max-width:700px){.wform{grid-template-columns:1fr 1fr}.wform .btn{grid-column:1/-1}.wsum{grid-template-columns:1fr 1fr}.wsum .tile .v{font-size:1.15rem}}
 </style>
 </head>
@@ -174,6 +200,10 @@ tr.total td{background:#fff8e1;font-weight:700}
 
   <h2 class="sec">💰 Sổ vé của bạn: lời / lỗ tự cập nhật</h2>
   <div class="box">
+    <p class="note" style="text-align:left;margin:0 0 8px">Mua vé xong ở app nào thì bấm y như vậy trên bàn dưới (chọn mệnh giá rồi chạm vào ô, chạm nhiều lần để cộng thêm), rồi bấm <b>Ghi vào sổ</b>. Bàn này chỉ để ghi sổ, <b>không mua vé thật</b>.</p>
+    <div class="bd" id="board"></div>
+    <p class="note" id="wMsg" style="text-align:left;margin:8px 0 0"></p>
+    <details class="wmore"><summary>Ghi vé kỳ cũ hoặc ghi tay</summary>
     <div class="wform">
       <label id="wKyL">Kỳ<input id="wKy" type="number" inputmode="numeric" oninput="this.dataset.touched = 1"></label>
       <label>Kiểu chơi<select id="wType" onchange="wTypeChanged()">
@@ -186,7 +216,7 @@ tr.total td{background:#fff8e1;font-weight:700}
       <label id="wWinL" style="display:none">Tiền thắng (đ)<input id="wWin" type="number" inputmode="numeric" step="1000" min="0" value="0"></label>
       <button class="btn" onclick="addTicket()">➕ Ghi vé</button>
     </div>
-    <p class="note" id="wMsg" style="text-align:left;margin:8px 0 0"></p>
+    </details>
     <div class="wsum" id="wSum"></div>
     <div id="wCapBox"></div>
     <div class="wexp" id="wExp" style="display:none"></div>
@@ -590,7 +620,56 @@ function importWallet(file) {
   }).catch(e => { $("wMsg").innerHTML = `⚠️ Không đọc được file sao lưu (${e.message}).`; });
 }
 
+/* ---------- Betting board: tap cells to build the tickets, then record them in the book ---------- */
+const BOARD_CHIPS = [10000, 20000, 50000, 100000];
+let chip = 10000, board = {}; // board: cell key ("lon", "sum:12", "pair:6", ...) -> amount
+const kfmt = v => v >= 1e6 ? (v / 1e6).toLocaleString("vi-VN") + "tr" : v / 1000 + "k";
+const xOf = pay => "x" + (pay / STAKE).toLocaleString("vi-VN");
+const mbs = (f, k) => Array(k).fill(`<span class="mb">${f}</span>`).join("");
+const cellTicket = key => { const [type, p] = key.split(":"); return p ? { type, pick: +p } : { type }; };
+function buildBoard() {
+  const F = [1, 2, 3, 4, 5, 6];
+  const cell = (key, inner, cls = "") => `<div class="cell ${cls}" data-k="${key}" onclick="tapCell('${key}')">${inner}<span class="chip" hidden></span></div>`;
+  const sumCell = s => cell("sum:" + s, `<div class="n">${s}</div><div class="x">${xOf(PAY_SUM[s])}</div>`);
+  const big = (key, name, range, pay, cls) => cell(key, `<div class="n">${name}</div><div class="x">${range} · ${xOf(pay)}</div>`, "big " + cls);
+  $("board").innerHTML =
+    `<div class="chips">${BOARD_CHIPS.map(v => `<button class="chipbtn" data-v="${v}" onclick="pickChip(${v})">${kfmt(v)}</button>`).join("")}<button class="chipbtn erase" data-v="0" onclick="pickChip(0)">✕ Bỏ ô</button></div>` +
+    `<h4>Lớn / Hoà / Nhỏ · Cộng tổng</h4>` +
+    `<div class="brow c3">${big("nho", "NHỎ", "3–9", PAY_CAT[0], "")}${big("hoa", "HOÀ", "10–11", PAY_CAT[1], "hoa")}${big("lon", "LỚN", "12–18", PAY_CAT[2], "")}</div>` +
+    `<div class="brow c8">${[3, 4, 5, 6, 7, 8, 9, 10].map(sumCell).join("")}</div><div class="brow c8">${[18, 17, 16, 15, 14, 13, 12, 11].map(sumCell).join("")}</div>` +
+    `<h4>3 số trùng nhau <small>${xOf(PAY_TRIPLE)}</small> · bất kỳ <small>${xOf(PAY_TRIPLE_ANY)}</small></h4>` +
+    `<div class="brow c7">${F.map(f => cell("trip:" + f, mbs(f, 3), "dk")).join("")}${cell("tripany", mbs("*", 3), "dk")}</div>` +
+    `<h4>2 số trùng nhau <small>${xOf(PAY_PAIR)}</small></h4><div class="brow c6">${F.map(f => cell("pair:" + f, mbs(f, 2), "dk")).join("")}</div>` +
+    `<h4>1 số <small>ra 1 con x1,2 · 2 con x2 · 3 con x3</small></h4><div class="brow c6">${F.map(f => cell("face:" + f, mbs(f, 1), "dk")).join("")}</div>` +
+    `<div class="bdbar"><div><b id="bdKy"></b><br><span id="bdTotal"></span></div><div class="bdbtn"><button class="btn ghost" onclick="clearBoard()">↺ Chọn lại</button><button class="btn" onclick="confirmBoard()">✔ Ghi vào sổ</button></div></div>`;
+  pickChip(chip);
+  updateBoard();
+}
+function pickChip(v) { chip = v; document.querySelectorAll("#board .chipbtn").forEach(b => b.classList.toggle("sel", +b.dataset.v === v)); }
+function tapCell(key) { if (chip) board[key] = (board[key] || 0) + chip; else delete board[key]; updateBoard(); }
+function clearBoard() { board = {}; updateBoard(); }
+function updateBoard() {
+  document.querySelectorAll("#board .cell").forEach(c => {
+    const v = board[c.dataset.k] || 0, ch = c.querySelector(".chip");
+    c.classList.toggle("on", v > 0); ch.hidden = !v; ch.textContent = v ? kfmt(v) : "";
+  });
+  const total = Object.values(board).reduce((a, b) => a + b, 0);
+  $("bdTotal").innerHTML = `Tiền vé tạm tính: <b>${vnd(total)}</b>`;
+  $("bdKy").textContent = `Kỳ #${nextKyNow()}`;
+}
+function confirmBoard() {
+  const keys = Object.keys(board), total = Object.values(board).reduce((a, b) => a + b, 0);
+  if (!keys.length) return $("wMsg").innerHTML = "⚠️ Chọn mệnh giá rồi chạm vào ô để đặt, sau đó mới bấm Ghi vào sổ.";
+  const ky = nextKyNow(), day = dayVN(), cap = +localStorage.getItem(CAP) || 0, after = stakedOn(day) + total;
+  if (cap && after > cap && !confirm(`Ghi các vé này thì tiền đặt hôm nay lên ${vnd(after)}, vượt hạn mức ${vnd(cap)} bạn tự đặt. Vẫn ghi?`)) return;
+  keys.forEach((k, i) => wallet.push({ id: Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5), ...cellTicket(k), ky, stake: board[k], date: day }));
+  saveWallet();
+  $("wMsg").innerHTML = `✅ Đã ghi ${keys.length} vé cho kỳ #${ky}, tổng ${vnd(total)}: ${keys.map(k => ticketName(cellTicket(k)) + " " + kfmt(board[k])).join(", ")}. Có kết quả là trang tự dò.`;
+  board = {}; updateBoard(); renderWallet();
+}
+
 function renderWallet() {
+  if ($("bdKy")) $("bdKy").textContent = `Kỳ #${nextKyNow()}`;
   const k = $("wKy"), nk = nextKyNow();
   if (!k.dataset.touched && nk) k.value = nk;
   const cap = +localStorage.getItem(CAP) || 0;
@@ -629,7 +708,7 @@ function renderWallet() {
       `<td>${t.type === "manual" ? "–" : r.done ? balls(r.d) + ` <small>(${sumD(r.d)})</small>` : (t.ky >= nextKyNow() ? "⏳ chờ quay" : "⏳ chưa có kết quả")}</td>` +
       `<td>${r.done ? (r.win ? vnd(r.win) : "0đ") + "<br>" + money(r.win - t.stake) : "–"}</td>` +
       `<td><button class="wdel" title="Xoá vé" onclick="delTicket('${t.id}')">✕</button></td></tr>`).join("")
-      : `<tr><td colspan="7">Chưa có vé nào. Chọn kỳ, kiểu chơi, tiền đặt rồi bấm "Ghi vé".</td></tr>`);
+      : `<tr><td colspan="7">Chưa có vé nào. Chạm vào ô trên bàn rồi bấm "Ghi vào sổ".</td></tr>`);
 }
 
 /* ---------- Draw gaps ("số kỳ chưa về"), like the Vietlott app ---------- */
@@ -876,6 +955,7 @@ async function poll() {
 
 load();
 wTypeChanged();
+buildBoard();
 renderWallet();
 render();
 poll();
