@@ -473,6 +473,9 @@ function learnPick(L, C, all, i, pr, date) {
   // The page shows and scores what the chosen methods picked
   pr.cat = pr.sel.cat; pr.face = pr.sel.face; pr.pair = pr.sel.pair; pr.trip = pr.sel.trip;
   pr.sumPick = pr.sel.sum; pr.sumMethod = pr.meth.sum;
+  // Keep the suggested 3 dice consistent with the chosen total and face
+  const cands = COMBOS.filter(c => sumD(c) === pr.sumPick), top = Math.max(...cands.map(comboP));
+  pr.combo = cands.filter(c => comboP(c) === top).sort((x, y) => y.includes(pr.face) - x.includes(pr.face))[0];
 }
 function learnScore(L, d, date) {
   L.n++;
@@ -1074,7 +1077,7 @@ function renderDays(all, rows) {
       const d = r.x.d, t = sumD(d), pr = r.pr, ok = r.picks.map(p => p.t(d));
       const won = r.picks.reduce((a, p) => a + p.pay(d), 0), nf = cnt(d, pr.face);
       return `<tr><td>#${r.x.ky}${liveKys.has(r.x.ky) ? " 🟢" : ""}</td><td>${balls(pr.combo)}</td><td>${markHits(d, pr.combo)}</td>` +
-        `<td>${vs(CAT[pr.cat], CAT[catIdx(t)], ok[0])}</td><td>${vs(pr.sum, t, ok[1])}</td>` +
+        `<td>${vs(CAT[pr.cat], CAT[catIdx(t)], ok[0])}</td><td>${vs(r.picks[1].v, t, ok[1])}</td>` +
         `<td>${pr.face} ${tick(ok[2])}${nf > 1 ? ` <small>(${nf} con)</small>` : ""}</td><td>${r.picks[3].v} ${tick(ok[3])}</td><td>${r.picks[4].v} ${tick(ok[4])}</td>` +
         `<td>${money(won - NPICK * STAKE)}</td></tr>`;
     }).join("") : `<tr><td colspan="9">Chưa có kỳ nào được chấm trong ngày này</td></tr>`);
