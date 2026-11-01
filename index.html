@@ -198,13 +198,13 @@ tr.wday td{background:#eef2f5 !important;text-align:left;font-size:.84rem;white-
   <div class="gap" id="gap"></div>
   <div class="pw">
     <div class="pbox">
-      <div class="ptitle">🔮 CỬA &amp; TỔNG ĐIỂM</div>
+      <div class="ptitle">🔮 VÉ LỚN / HOÀ / NHỎ</div>
       <div class="pbig" id="pCat">LỚN</div>
       <div class="tags" id="pCatTags"></div>
       <p class="pnote" id="pCatNote"></p>
     </div>
     <div class="pbox blue">
-      <div class="ptitle">🎲 GỢI Ý 3 SỐ XÚC XẮC</div>
+      <div class="ptitle">🎲 CÁC VÉ CÒN LẠI</div>
       <div class="drow" id="pDice"></div>
       <div class="tags" id="pDiceTags"></div>
       <p class="pnote" id="pDiceNote"></p>
@@ -634,12 +634,12 @@ function renderPrediction(all, nextKy, pr) {
   $("gap").textContent = `⚠️ Thiếu kết quả kỳ #${last.ky + 1}${nextKy - 1 > last.ky + 1 ? "–#" + (nextKy - 1) : ""} (trang đóng hoặc mất mạng lúc đó), nên dự đoán đang dựa trên kỳ #${last.ky}. ` +
     (LOCAL ? "Trang đang tự bù các kỳ thiếu, chờ vài giây." : HOSTED ? "Trang online tự bù kỳ thiếu từ dữ liệu cập nhật khoảng 5–10 phút một lần." : "Để trang tự bù kỳ thiếu, hãy mở bằng file Mo-Bingo18.bat (cùng thư mục) thay vì bấm đúp file HTML.");
   $("pCat").textContent = CAT[pr.cat].toUpperCase();
-  $("pCatTags").innerHTML = [`Cộng tổng: ${pr.sumPick}`, `Trúng nhận ${vnd(PAY_CAT[pr.cat])}`].map(t => `<span class="tag">${t}</span>`).join("");
+  $("pCatTags").innerHTML = [`Trúng nhận ${vnd(PAY_CAT[pr.cat])} / vé 10.000đ`].map(t => `<span class="tag">${t}</span>`).join("");
   $("pCatNote").innerHTML = `Kỳ #${pr.prevKy} ra <b>${CAT[pr.prevCat]}</b> (tổng ${pr.prevSum}). Trong lịch sử có ${pr.nCat} lần kỳ trước ra ${CAT[pr.prevCat]}; mô hình Markov ước tính kỳ sau: ` +
-    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Cửa gợi ý ${CAT[pr.cat]} theo cách "${LEARN_TYPES[0].methods[pr.meth.cat].name}". Cộng tổng gợi ý ${pr.sumPick}: theo cách "${SUM_METHODS[pr.sumMethod].name}", cách đang trúng nhiều nhất (trang tự chọn lại mỗi ngày).`;
+    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Gợi ý ${CAT[pr.cat]} theo cách "${LEARN_TYPES[0].methods[pr.meth.cat].name}", cách đang trúng nhiều nhất (trang tự chọn lại mỗi ngày).`;
   $("pDice").innerHTML = pr.combo.map(v => `<span class="bigdice">${v}</span>`).join("");
-  $("pDiceTags").innerHTML = [`Chọn 1 số: ${pr.face}`, `Hai số trùng: ${pr.pair}-${pr.pair}`, `Ba số trùng: ${pr.trip}-${pr.trip}-${pr.trip}`].map(t => `<span class="tag">${t}</span>`).join("");
-  $("pDiceNote").textContent = `Bộ 3 số gợi ý chỉ để tham khảo, không phải kiểu chơi. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
+  $("pDiceTags").innerHTML = [`Cộng tổng: ${pr.sumPick}`, `Chọn 1 số: ${pr.face}`, `Hai số trùng: ${pr.pair}-${pr.pair}`, `Ba số trùng: ${pr.trip}-${pr.trip}-${pr.trip}`].map(t => `<span class="tag">${t}</span>`).join("");
+  $("pDiceNote").textContent = `Mỗi kiểu chơi là một vé riêng nên được chọn riêng, theo cách đang trúng nhiều nhất của kiểu đó. Vì vậy Cộng tổng (${pr.sumPick}, thuộc cửa ${CAT[catIdx(pr.sumPick)]}) có thể khác cửa ở ô bên cạnh: tổng 10 và 11 ra nhiều nhất (12,5%) nhưng thuộc Hoà, còn vé cửa thì Lớn hoặc Nhỏ trúng nhiều hơn Hoà (37,5% so với 25%). Bộ 3 số trên chỉ để minh hoạ một kết quả có tổng ${pr.sumPick}. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
   $("honest").innerHTML = `⚠️ <b>Đọc trước khi đánh:</b> dự đoán đổi theo từng kỳ, dựa trên mô hình Markov: sau những kỳ giống kỳ vừa ra, kỳ kế tiếp trong lịch sử hay ra gì nhất (có làm mượt để tránh bị lệch do ít dữ liệu). ` +
     `Hiện kiểm định chưa thấy kỳ trước ảnh hưởng kỳ sau, nên cơ hội trúng thật vẫn bằng xác suất lý thuyết. Theo cơ cấu giải của Vietlott, mỗi vé 10.000đ chỉ trả lại trung bình 5.000–5.700đ, nên đánh lâu dài chắc chắn lỗ. Hãy đặt ít.`;
 }
