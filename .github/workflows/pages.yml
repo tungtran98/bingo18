@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html _site/
-          node scripts/fetch-data.js _site/data.json "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data.json"
+          node scripts/fetch-data.js _site/data.json history.json "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data.json"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
