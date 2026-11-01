@@ -166,7 +166,8 @@ tr.total td{background:#fff8e1;font-weight:700}
 .bdky{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .bdky input{padding:6px 8px;border:1px solid #c8e6c9;border-radius:8px;font-size:16px;min-width:0;background:#fff;color:var(--ink)}
 .bdky #bdKyIn{width:110px;text-align:center;font-weight:700}
-.bdky input[type=date]{width:150px}.bdky input[type=time]{width:110px}
+.bdky select{padding:6px 8px;border:1px solid #c8e6c9;border-radius:8px;font-size:16px;min-width:0;background:#fff;color:var(--ink)}
+#bdDate{width:auto;max-width:100%}#bdSlot{flex:1;min-width:190px}
 .kbtn{border:1px solid #c8e6c9;background:#fff;color:#0f3d27;border-radius:8px;padding:6px 10px;font-weight:800;cursor:pointer;touch-action:manipulation}
 .bdinfo{line-height:1.6}
 .bdinfo .ball{width:20px;height:20px;line-height:17px;font-size:.75rem;margin:0 1px}
@@ -224,7 +225,7 @@ tr.wday td{background:#eef2f5 !important;text-align:left;font-size:.84rem;white-
       </select></label>
       <label id="wPickL">Chọn<select id="wPick"></select></label>
       <label>Tiền đặt (đ)<input id="wStake" type="number" inputmode="numeric" step="10000" min="0" value="10000"></label>
-      <label id="wDateL" style="display:none">Ngày<input id="wDate" type="date"></label>
+      <label id="wDateL" style="display:none">Ngày<select id="wDate"></select></label>
       <label id="wWinL" style="display:none">Tiền thắng (đ)<input id="wWin" type="number" inputmode="numeric" step="1000" min="0" value="0"></label>
       <button class="btn" onclick="addTicket()">➕ Ghi vé</button>
     </div>
@@ -586,7 +587,7 @@ function wTypeChanged() {
   $("wWinL").style.display = ty === "manual" ? "" : "none";
   $("wKyL").style.display = ty === "manual" ? "none" : "";
   $("wDateL").style.display = ty === "manual" ? "" : "none";
-  if (!$("wDate").value) $("wDate").value = ymd(dayVN());
+  if (!$("wDate").options.length) $("wDate").innerHTML = dayOptions(60);
 }
 function addTicket() {
   const ty = $("wType").value, stake = Math.round(+$("wStake").value || 0), msg = m => $("wMsg").innerHTML = m;
@@ -595,7 +596,7 @@ function addTicket() {
     const win = Math.round(+$("wWin").value || 0);
     if (stake < 0 || win < 0 || stake + win === 0) return msg("⚠️ Nhập tiền đặt và tiền thắng của vé đó.");
     t.win = win;
-    if ($("wDate").value) t.date = $("wDate").value.split("-").reverse().join("-");
+    t.date = $("wDate").value || dayVN();
   } else {
     if (stake < STAKE || stake % STAKE) return msg("⚠️ Tiền đặt phải là 10.000đ, 20.000đ, 30.000đ… (bội số của 10.000đ).");
     t.ky = parseInt($("wKy").value, 10);
@@ -641,23 +642,41 @@ function kyTime(ky) {
   const i = ((ky - KY_ANCHOR) % KY_PER_DAY + KY_PER_DAY) % KY_PER_DAY, mins = 360 + 6 * i;
   return String(Math.floor(mins / 60)).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0");
 }
-// The draw a ticket bought at this date and time goes into: the first draw at or after that time
-function kyAt(ddmmyyyy, hhmm) {
-  const [h, m] = hhmm.split(":").map(Number), i = Math.min(KY_PER_DAY - 1, Math.max(0, Math.ceil((h * 60 + m - 360) / 6)));
-  return KY_ANCHOR + dayIndex(ddmmyyyy) * KY_PER_DAY + i;
-}
+// Date of a draw number ("dd-mm-yyyy") and first draw of a date, from the schedule
+const kyDay = ky => new Date(KY_ANCHOR_DAY + Math.floor((ky - KY_ANCHOR) / KY_PER_DAY) * 86400e3).toISOString().slice(0, 10).split("-").reverse().join("-");
+const firstKyOf = day => KY_ANCHOR + dayIndex(day) * KY_PER_DAY;
+// Date choices, newest first, always shown as dd/mm/yyyy (native date inputs follow the phone's language)
+const dayOptions = n => Array.from({ length: n }, (_, i) => { const d = dayVN(-i); return `<option value="${d}">${d.replace(/-/g, "/")}${i === 0 ? " (hôm nay)" : i === 1 ? " (hôm qua)" : ""}</option>`; }).join("");
 
 let boardKy = null; // null = follow the draw about to be drawn
 const boardKyNow = () => boardKy || nextKyNow();
 function setBoardKy(v) { const k = parseInt(v, 10); boardKy = k > 0 && k < nextKyNow() ? k : null; updateBoard(); }
 function stepKy(d) { setBoardKy(boardKyNow() + d); }
-function setBoardTime() {
-  const d = $("bdDate").value, t = $("bdTime").value;
-  if (d && t) setBoardKy(kyAt(d.split("-").reverse().join("-"), t));
+// Picking a past day jumps to its last draw; today goes back to the draw about to be drawn
+function pickDayBoard() { const day = $("bdDate").value; slotSig = ""; setBoardKy(day === dayVN() ? null : firstKyOf(day) + KY_PER_DAY - 1); }
+let slotSig = "";
+// 24-hour draw times of the chosen day, newest first, with results; rebuilt only when they change so an open list stays open
+function fillSlots() {
+  const sel = $("bdSlot"), day = $("bdDate").value, first = firstKyOf(day), next = nextKyNow(), sig = [day, next, draws.size].join("|");
+  if (sig === slotSig || document.activeElement === sel) return;
+  slotSig = sig;
+  const opts = [];
+  for (let k = first; k < first + KY_PER_DAY && k <= next; k++) {
+    const x = draws.get(k);
+    opts.push(`<option value="${k}">${kyTime(k)} · #${k}${x ? " · ra " + x.d.join("-") : k >= next ? " · sắp quay" : ""}</option>`);
+  }
+  sel.innerHTML = `<option value="">Chọn giờ quay…</option>` + opts.reverse().join("");
 }
 function updateBoardKy() {
   const ky = boardKyNow(), inp = $("bdKyIn"), x = draws.get(ky), total = Object.values(board).reduce((a, b) => a + b, 0);
   if (document.activeElement !== inp) inp.value = ky;
+  // Keep the date and time lists on the chosen draw
+  const ds = $("bdDate");
+  if (!ds.options.length || ds.options[0].value !== dayVN()) { const keep = ds.value; ds.innerHTML = dayOptions(30); ds.value = keep || dayVN(); if (!ds.value) ds.value = dayVN(); }
+  const kd = kyDay(ky);
+  if (document.activeElement !== ds && ds.value !== kd && ds.querySelector(`option[value="${kd}"]`)) ds.value = kd;
+  fillSlots();
+  if (document.activeElement !== $("bdSlot")) $("bdSlot").value = $("bdSlot").querySelector(`option[value="${ky}"]`) ? String(ky) : "";
   const when = `khoảng ${kyTime(ky)}`;
   let info;
   if (ky >= nextKyNow()) info = `⏳ Kỳ sắp quay (${when}): ghi vào sẽ chờ kết quả.`;
@@ -692,8 +711,7 @@ function buildBoard() {
     `<div class="brow c7">${F.map(f => cell("trip:" + f, mbs(f, 3), "dk")).join("")}${cell("tripany", mbs("*", 3), "dk")}</div>` +
     `<h4>2 số trùng nhau <small>${xOf(PAY_PAIR)}</small></h4><div class="brow c6">${F.map(f => cell("pair:" + f, mbs(f, 2), "dk")).join("")}</div>` +
     `<h4>1 số <small>ra 1 con x1,2 · 2 con x2 · 3 con x3</small></h4><div class="brow c6">${F.map(f => cell("face:" + f, mbs(f, 1), "dk")).join("")}</div>` +
-    `<div class="bdpick"><div class="bdky"><span>Ghi cho kỳ</span><button class="kbtn" onclick="stepKy(-1)">−</button><input id="bdKyIn" type="number" inputmode="numeric" onchange="setBoardKy(this.value)"><button class="kbtn" onclick="stepKy(1)">+</button><button class="kbtn" id="bdNow" onclick="setBoardKy(null)">↻ Kỳ sắp quay</button></div><div class="bdky"><span>hoặc giờ mua vé</span><input id="bdDate" type="date" onchange="setBoardTime()"><input id="bdTime" type="time" onchange="setBoardTime()"></div><div class="bdinfo" id="bdKyInfo"></div></div><div class="bdbar"><div><span id="bdTotal"></span></div><div class="bdbtn"><button class="btn ghost" onclick="clearBoard()">↺ Chọn lại</button><button class="btn" onclick="confirmBoard()">✔ Ghi vào sổ</button></div></div>`;
-  $("bdDate").value = ymd(dayVN());
+    `<div class="bdpick"><div class="bdky"><span>Ghi cho kỳ</span><button class="kbtn" onclick="stepKy(-1)">−</button><input id="bdKyIn" type="number" inputmode="numeric" onchange="setBoardKy(this.value)"><button class="kbtn" onclick="stepKy(1)">+</button><button class="kbtn" id="bdNow" onclick="setBoardKy(null)">↻ Kỳ sắp quay</button></div><div class="bdky"><span>hoặc chọn ngày</span><select id="bdDate" onchange="pickDayBoard()"></select><select id="bdSlot" onchange="setBoardKy(this.value)"></select></div><div class="bdinfo" id="bdKyInfo"></div></div><div class="bdbar"><div><span id="bdTotal"></span></div><div class="bdbtn"><button class="btn ghost" onclick="clearBoard()">↺ Chọn lại</button><button class="btn" onclick="confirmBoard()">✔ Ghi vào sổ</button></div></div>`;
   pickChip(chip);
   updateBoard();
 }
