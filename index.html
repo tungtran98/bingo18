@@ -117,6 +117,29 @@ tr.total td{background:#fff8e1;font-weight:700}
 .gkrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:.9rem;margin:10px 0 4px}
 .gkcat .bar{height:10px;border-radius:5px}
 @media (max-width:600px){.gk th{font-size:.7rem}.gk td{padding:6px 3px}.gk .ball{width:21px;height:21px;line-height:18px;font-size:.75rem}.sq{min-width:28px}}
+/* Ticket book: the player's own bets and running profit */
+.wform{display:grid;grid-template-columns:110px 1.4fr 90px 1fr auto;gap:10px;align-items:end}
+.wform label,.wtools label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:#555}
+/* 16px inputs stop iPhone Safari from zooming in on focus */
+.wform input,.wform select,.wtools input{padding:8px;border:1px solid var(--border);border-radius:8px;font-size:16px;width:100%;min-width:0;background:#fff;color:var(--ink)}
+.wform .btn{padding:10px 16px}
+.wsum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 10px}
+.wsum>*{min-width:0}
+.wsum .tile .v{font-size:1.3rem}
+.wsum .tile .l{line-height:1.45}
+.wexp{background:#fff8e1;border:1px solid #ffe082;color:#6d4c00;border-radius:10px;padding:10px 14px;font-size:.86rem;margin-bottom:10px}
+.wcap{margin:0 0 12px;font-size:.88rem}
+.wcap .bar{height:10px;border-radius:5px;margin-top:4px}
+.wcap.over{color:#c62828;font-weight:700}
+#wList td{white-space:nowrap}
+#wList .ball{width:20px;height:20px;line-height:17px;font-size:.75rem;margin:0 1px}
+@media (max-width:600px){#wList td,#wList th{padding:6px 4px}}
+.wdel{border:none;background:none;color:#999;font-size:1rem;cursor:pointer;padding:2px 6px}
+.wtools{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:12px}
+.wtools label.capin{max-width:220px}
+.btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.btn.ghost:hover{background:#fff5f5}
+@media (max-width:700px){.wform{grid-template-columns:1fr 1fr}.wform .btn{grid-column:1/-1}.wsum{grid-template-columns:1fr 1fr}.wsum .tile .v{font-size:1.15rem}}
 </style>
 </head>
 <body>
@@ -148,6 +171,33 @@ tr.total td{background:#fff8e1;font-weight:700}
     </div>
   </div>
   <div class="honest" id="honest"></div>
+
+  <h2 class="sec">💰 Sổ vé của bạn: lời / lỗ tự cập nhật</h2>
+  <div class="box">
+    <div class="wform">
+      <label id="wKyL">Kỳ<input id="wKy" type="number" inputmode="numeric" oninput="this.dataset.touched = 1"></label>
+      <label>Kiểu chơi<select id="wType" onchange="wTypeChanged()">
+        <option value="lon">Lớn (12–18)</option><option value="nho">Nhỏ (3–9)</option><option value="hoa">Hoà (10–11)</option>
+        <option value="sum">Cộng tổng</option><option value="face">Chọn 1 số</option><option value="pair">Hai số trùng</option>
+        <option value="trip">Ba số trùng</option><option value="tripany">Ba số trùng bất kỳ</option><option value="manual">Ghi tay (không nhớ kỳ)</option>
+      </select></label>
+      <label id="wPickL">Chọn<select id="wPick"></select></label>
+      <label>Tiền đặt (đ)<input id="wStake" type="number" inputmode="numeric" step="10000" min="0" value="10000"></label>
+      <label id="wWinL" style="display:none">Tiền thắng (đ)<input id="wWin" type="number" inputmode="numeric" step="1000" min="0" value="0"></label>
+      <button class="btn" onclick="addTicket()">➕ Ghi vé</button>
+    </div>
+    <p class="note" id="wMsg" style="text-align:left;margin:8px 0 0"></p>
+    <div class="wsum" id="wSum"></div>
+    <div id="wCapBox"></div>
+    <div class="wexp" id="wExp" style="display:none"></div>
+    <div class="tr scroll" style="max-height:360px"><table id="wList"></table></div>
+    <div class="wtools">
+      <label class="capin">Hạn mức tiền đặt mỗi ngày (đ)<input id="wCap" type="number" inputmode="numeric" step="10000" min="0" placeholder="Không đặt" onchange="setCap(this.value)"></label>
+      <button class="btn ghost" onclick="exportWallet()">⬇️ Sao lưu</button>
+      <label class="btn ghost" style="flex-direction:row;color:var(--primary);font-size:.9rem">⬆️ Khôi phục<input type="file" accept=".json,application/json" hidden onchange="importWallet(this.files[0]); this.value = ''"></label>
+    </div>
+    <p class="note" style="text-align:left">Ghi vé xong, tới khi kỳ đó có kết quả trang tự dò và cộng tiền thắng (theo cơ cấu giải Vietlott, tiền đặt là bội số 10.000đ). Vé cũ không nhớ kỳ thì chọn "Ghi tay" và nhập tiền đặt, tiền thắng. Sổ vé chỉ lưu trên trình duyệt của máy này, không gửi đi đâu: đổi máy hoặc xoá dữ liệu Safari sẽ mất, nên thỉnh thoảng bấm Sao lưu. Trên iPhone nên chọn Chia sẻ → Thêm vào MH chính để Safari không tự xoá dữ liệu.</p>
+  </div>
 
   <h2 class="sec">📈 Số kỳ chưa về (cập nhật theo từng kỳ)</h2>
   <p class="note" id="gkInfo" style="text-align:left;margin:0 0 10px"></p>
@@ -448,6 +498,140 @@ function renderTwins(all, pr) {
       `Khả năng kỳ tới ra đúng ${pr.trip}-${pr.trip}-${pr.trip}: <b>${pct(pr.tripP[pr.trip], 2)}</b> theo mô hình (lý thuyết 0,46%, khoảng 1 lần mỗi 216 kỳ). Nếu kỳ tới ra bộ ba, khả năng là số ${pr.trip}: <b>${pct(pr.tripP[pr.trip] / tripSum)}</b> (lý thuyết 16,7%). Bộ ba bất kỳ: 2,78%.`, tripRows, anyRow);
 }
 
+/* ---------- Ticket book: the player's own bets, settled as results come in ---------- */
+const WALLET = "b18_wallet_v1", CAP = "b18_daycap_v1";
+let wallet = [];
+try { wallet = JSON.parse(localStorage.getItem(WALLET) || "[]"); } catch (e) { wallet = []; }
+const saveWallet = () => { try { localStorage.setItem(WALLET, JSON.stringify(wallet)); } catch (e) { /* storage full or blocked */ } };
+const dayVN = (offset = 0) => new Date(Date.now() + 7 * 3600e3 + offset * 86400e3).toISOString().slice(0, 10).split("-").reverse().join("-");
+const ymd = d => d.split("-").reverse().join("-"); // dd-mm-yyyy -> yyyy-mm-dd, sortable
+const PICKED = ["sum", "face", "pair", "trip"];
+const ticketName = t => ({ lon: "Lớn", nho: "Nhỏ", hoa: "Hoà", sum: `Tổng ${t.pick}`, face: `Chọn số ${t.pick}`, pair: `Cặp ${t.pick}-${t.pick}`,
+  trip: `Bộ ${t.pick}-${t.pick}-${t.pick}`, tripany: "Bộ ba bất kỳ", manual: "Ghi tay" })[t.type];
+// Prize for each 10,000đ of a ticket, given result d
+function unitPay(t, d) {
+  const s = sumD(d), c = cnt(d, t.pick);
+  switch (t.type) {
+    case "lon": return catIdx(s) === 2 ? PAY_CAT[2] : 0;
+    case "nho": return catIdx(s) === 0 ? PAY_CAT[0] : 0;
+    case "hoa": return catIdx(s) === 1 ? PAY_CAT[1] : 0;
+    case "sum": return s === t.pick ? PAY_SUM[s] : 0;
+    case "face": return PAY_FACE[c];
+    case "pair": return c >= 2 ? PAY_PAIR : 0;
+    case "trip": return c === 3 ? PAY_TRIPLE : 0;
+    case "tripany": return distinct(d) === 1 ? PAY_TRIPLE_ANY : 0;
+  }
+  return 0;
+}
+// Average share of the stake paid back, from the exact probabilities (exact for every bet type)
+function rtpOf(t) {
+  let e = 0; OUT.forEach(d => e += unitPay(t, d));
+  return e / 216 / STAKE;
+}
+function settle(t) {
+  if (t.type === "manual") return { done: true, win: t.win, date: t.date };
+  const x = draws.get(t.ky);
+  if (!x) return { done: false, date: t.date };
+  return { done: true, d: x.d, win: unitPay(t, x.d) * t.stake / STAKE, date: x.date || t.date };
+}
+const nextKyNow = () => { const all = sorted(); return all.length ? Math.max(all[all.length - 1].ky + 1, inProgress || 0) : inProgress || 0; };
+const stakedOn = day => wallet.reduce((a, t) => a + (settle(t).date === day ? t.stake : 0), 0);
+
+function wTypeChanged() {
+  const ty = $("wType").value;
+  const opts = ty === "sum" ? Array.from({ length: 16 }, (_, i) => i + 3) : PICKED.includes(ty) ? [1, 2, 3, 4, 5, 6] : [];
+  $("wPick").innerHTML = opts.map(v => `<option value="${v}">${ty === "sum" ? "Tổng " + v : "Số " + v}</option>`).join("");
+  if (ty === "sum") $("wPick").value = "10";
+  $("wPickL").style.display = opts.length ? "" : "none";
+  $("wWinL").style.display = ty === "manual" ? "" : "none";
+  $("wKyL").style.display = ty === "manual" ? "none" : "";
+}
+function addTicket() {
+  const ty = $("wType").value, stake = Math.round(+$("wStake").value || 0), msg = m => $("wMsg").innerHTML = m;
+  const t = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type: ty, stake, date: dayVN() };
+  if (ty === "manual") {
+    const win = Math.round(+$("wWin").value || 0);
+    if (stake < 0 || win < 0 || stake + win === 0) return msg("⚠️ Nhập tiền đặt và tiền thắng của vé đó.");
+    t.win = win;
+  } else {
+    if (stake < STAKE || stake % STAKE) return msg("⚠️ Tiền đặt phải là 10.000đ, 20.000đ, 30.000đ… (bội số của 10.000đ).");
+    t.ky = parseInt($("wKy").value, 10);
+    if (!(t.ky > 0)) return msg("⚠️ Nhập số kỳ của vé.");
+    if (PICKED.includes(ty)) t.pick = +$("wPick").value;
+  }
+  const cap = +localStorage.getItem(CAP) || 0, day = settle(t).date, after = stakedOn(day) + t.stake;
+  if (cap && after > cap && !confirm(`Vé này làm tiền đặt ngày ${day.replace(/-/g, "/")} lên ${vnd(after)}, vượt hạn mức ${vnd(cap)} bạn tự đặt. Vẫn ghi?`)) return;
+  wallet.push(t); saveWallet();
+  delete $("wKy").dataset.touched; // follow the next draw again
+  const r = settle(t);
+  msg(`✅ Đã ghi ${ticketName(t)} · ${vnd(t.stake)}` + (t.ky ? ` · kỳ #${t.ky}` : "") + (t.type !== "manual" ? (r.done ? ` · kỳ này đã có kết quả: ${r.win ? "trúng " + vnd(r.win) : "trượt"}` : " · chờ kết quả") : ""));
+  renderWallet();
+}
+function delTicket(id) {
+  const t = wallet.find(x => x.id === id);
+  if (!t || !confirm(`Xoá vé ${ticketName(t)} ${vnd(t.stake)}${t.ky ? " kỳ #" + t.ky : ""}?`)) return;
+  wallet = wallet.filter(x => x.id !== id); saveWallet(); renderWallet();
+}
+function setCap(v) { const c = Math.max(0, Math.round(+v || 0)); try { localStorage.setItem(CAP, String(c)); } catch (e) { /* blocked */ } renderWallet(); }
+function exportWallet() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: "bingo18", saved: new Date().toISOString(), tickets: wallet }, null, 1)], { type: "application/json" }));
+  a.download = `bingo18-so-ve-${dayVN()}.json`; document.body.appendChild(a); a.click(); a.remove();
+}
+function importWallet(file) {
+  if (!file) return;
+  file.text().then(txt => {
+    const o = JSON.parse(txt), list = Array.isArray(o) ? o : o.tickets;
+    if (!Array.isArray(list)) throw new Error("không đúng định dạng");
+    const have = new Set(wallet.map(t => t.id)); let added = 0;
+    list.forEach(t => { if (t && t.id && t.type && !have.has(t.id)) { wallet.push(t); added++; } });
+    saveWallet(); renderWallet();
+    $("wMsg").innerHTML = `✅ Đã khôi phục ${added} vé (bỏ qua ${list.length - added} vé đã có).`;
+  }).catch(e => { $("wMsg").innerHTML = `⚠️ Không đọc được file sao lưu (${e.message}).`; });
+}
+
+function renderWallet() {
+  const k = $("wKy"), nk = nextKyNow();
+  if (!k.dataset.touched && nk) k.value = nk;
+  const cap = +localStorage.getItem(CAP) || 0;
+  if (document.activeElement !== $("wCap")) $("wCap").value = cap || "";
+
+  const rows = wallet.map(t => ({ t, r: settle(t) }));
+  const today = dayVN(), weekFrom = ymd(dayVN(-6)), month = today.slice(3);
+  const period = (label, keep) => {
+    const rs = rows.filter(x => keep(x.r.date)), done = rs.filter(x => x.r.done), wait = rs.filter(x => !x.r.done);
+    const staked = done.reduce((a, x) => a + x.t.stake, 0), won = done.reduce((a, x) => a + x.r.win, 0);
+    return { label, n: rs.length, hits: done.filter(x => x.r.win > 0).length, staked, won, wait: wait.length, waitStake: wait.reduce((a, x) => a + x.t.stake, 0) };
+  };
+  $("wSum").innerHTML = [
+    period("Hôm nay", d => d === today), period("7 ngày qua", d => ymd(d) >= weekFrom),
+    period(`Tháng ${month.replace("-", "/")}`, d => d.slice(3) === month), period("Từ trước tới giờ", () => true),
+  ].map(p => `<div class="tile"><div class="v">${p.staked || p.won ? money(p.won - p.staked) : "0đ"}</div><div class="l"><b>${p.label}</b><br>Đặt ${vnd(p.staked)}<br>Thắng ${vnd(p.won)}<br>${p.n} vé, ${p.hits} vé trúng` +
+    (p.wait ? `<br>⏳ ${p.wait} vé chờ kết quả (${vnd(p.waitStake)})` : "") + `</div></div>`).join("");
+
+  // Daily limit the player set for themselves
+  const todayStake = stakedOn(today);
+  $("wCapBox").innerHTML = cap ? `<div class="wcap${todayStake >= cap ? " over" : ""}">${todayStake >= cap ? "⛔ " : ""}Hạn mức hôm nay: đã đặt ${vnd(todayStake)} / ${vnd(cap)}${todayStake >= cap ? ". Đã chạm hạn mức, nên dừng ở đây." : ""}` +
+    `<div class="bar"><i style="width:${Math.min(100, todayStake / cap * 100).toFixed(1)}%;background:${todayStake >= cap ? "#c62828" : "#4caf50"}"></i></div></div>` : "";
+
+  // What the exact odds say these same tickets should return on average
+  const byDraw = rows.filter(x => x.t.type !== "manual" && x.r.done);
+  if (byDraw.length) {
+    const st = byDraw.reduce((a, x) => a + x.t.stake, 0), exp = byDraw.reduce((a, x) => a + x.t.stake * rtpOf(x.t), 0), won = byDraw.reduce((a, x) => a + x.r.win, 0);
+    $("wExp").style.display = "";
+    $("wExp").innerHTML = `📐 Với ${byDraw.length} vé theo kỳ đã có kết quả, bạn đặt <b>${vnd(st)}</b>. Theo xác suất, trung bình chỉ được trả lại khoảng <b>${vnd(Math.round(exp / 1000) * 1000)}</b> (${pct(exp / st, 0)}), tức kỳ vọng lỗ ${vnd(Math.round((st - exp) / 1000) * 1000)}. ` +
+      `Thực tế bạn nhận <b>${vnd(won)}</b>: ${won >= exp ? "đang may hơn mức trung bình, nhưng đánh lâu sẽ kéo về mức kỳ vọng." : "đang kém hơn mức trung bình."}`;
+  } else $("wExp").style.display = "none";
+
+  const list = rows.slice().sort((a, b) => (b.t.ky || 0) - (a.t.ky || 0) || (b.t.id > a.t.id ? 1 : -1));
+  $("wList").innerHTML = `<tr><th>Kỳ</th><th>Vé</th><th>Tiền đặt</th><th>Kết quả</th><th>Thắng<br><small>lời / lỗ</small></th><th></th></tr>` +
+    (list.length ? list.map(({ t, r }) => `<tr><td>${t.ky ? "#" + t.ky : "–"}<br><small style="color:#888">${r.date.replace(/-/g, "/")}</small></td><td>${ticketName(t)}</td><td>${vnd(t.stake)}</td>` +
+      `<td>${t.type === "manual" ? "–" : r.done ? balls(r.d) + ` <small>(${sumD(r.d)})</small>` : (t.ky >= nextKyNow() ? "⏳ chờ quay" : "⏳ chưa có kết quả")}</td>` +
+      `<td>${r.done ? (r.win ? vnd(r.win) : "0đ") + "<br>" + money(r.win - t.stake) : "–"}</td>` +
+      `<td><button class="wdel" title="Xoá vé" onclick="delTicket('${t.id}')">✕</button></td></tr>`).join("")
+      : `<tr><td colspan="7">Chưa có vé nào. Chọn kỳ, kiểu chơi, tiền đặt rồi bấm "Ghi vé".</td></tr>`);
+}
+
 /* ---------- Draw gaps ("số kỳ chưa về"), like the Vietlott app ---------- */
 let gapSig = "";
 function renderGaps(all) {
@@ -616,6 +800,7 @@ function render() {
     (lastRow ? `<span style="color:#666;font-size:.88rem">Mô hình đã đoán: ${lastRow.picks.slice(0, 3).map(p => `${p.v} ${tick(p.t(last.d))}`).join(" · ")}</span>` : "");
   renderPrediction(all, Math.max(last.ky + 1, inProgress || 0), pr);
   renderBets(pr);
+  renderWallet();
   renderGaps(all);
   renderTwins(all, pr);
   renderFaces(all, pr);
@@ -690,6 +875,8 @@ async function poll() {
 }
 
 load();
+wTypeChanged();
+renderWallet();
 render();
 poll();
 setInterval(poll, POLL_MS);
