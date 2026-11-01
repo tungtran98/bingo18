@@ -110,7 +110,6 @@ tr.total td{background:#fff8e1;font-weight:700}
 .gk td{padding:6px 4px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .gk tr:nth-child(even) td{background:#f3f8ff}
 .sq{display:inline-block;min-width:32px;padding:4px 0;border-radius:6px;background:#f57c00;color:#fff;font-weight:800}
-.gk .av{color:var(--blue);font-weight:600}
 .far{color:#d32f2f;font-weight:800}
 .now{color:var(--green);font-weight:800}
 .ball.o{background:#f57c00;border-color:#f57c00;color:#fff;margin:0 1px}
@@ -158,7 +157,7 @@ tr.total td{background:#fff8e1;font-weight:700}
   <div class="tr"><table class="gk" id="gkTrip"></table></div>
   <h3 class="sub">Thống kê bộ <b style="color:var(--blue)">2 số trùng nhau</b> <small style="color:#888">(ít nhất 2 viên giống nhau)</small></h3>
   <div class="tr"><table class="gk" id="gkPair"></table></div>
-  <p class="note">Theo lý thuyết, trung bình khoảng: tổng 3 hoặc 18 cứ 216 kỳ về 1 lần, tổng 10 hoặc 11 cứ 8 kỳ; đúng 1 bộ ba 216 kỳ, bộ ba bất kỳ 36 kỳ, 1 cặp trùng 13,5 kỳ. <span class="far">Số đỏ</span> là đã vắng lâu hơn gấp đôi mức đó, <span class="now">số xanh</span> là vừa về ở kỳ mới nhất. Vắng lâu <b>không</b> làm nó dễ ra hơn ở kỳ sau: mỗi kỳ vẫn đúng xác suất cũ.</p>
+  <p class="note"><span class="far">Số đỏ</span> là đã vắng lâu bất thường (lâu hơn gấp đôi mức trung bình theo lý thuyết), <span class="now">số xanh</span> là vừa về ở kỳ mới nhất. Vắng lâu <b>không</b> làm nó dễ ra hơn ở kỳ sau: mỗi kỳ vẫn đúng xác suất cũ.</p>
 
   <h2 class="sec">📋 Dự đoán theo 5 kiểu chơi của Vietlott</h2>
   <div class="grid3" id="bets"></div>
@@ -474,31 +473,31 @@ function renderGaps(all) {
   E.forEach(e => { e.gap = e.lastKy === null ? null : last.ky - e.lastKy; if (e.gap !== null) e.longest = Math.max(e.longest, e.gap); });
 
   const num = v => v.toLocaleString("vi-VN"), fmtD = d => (d || "?").replace(/-/g, "/");
-  const avg = e => e.count ? num(Math.round(n / e.count)) : "–";
+  const nDays = new Set(all.map(x => x.date)).size;
   const never = `&gt; ${num(span)}`;
   // Red once a result has been missing for more than twice its theoretical average gap
   const gapCell = e => e.gap === null ? `<td class="far">${never}</td>` : `<td class="${e.gap === 0 ? "now" : e.gap > 2 / e.p ? "far" : ""}">${num(e.gap)}</td>`;
   const miss = span - n;
   $("gkInfo").innerHTML = `Tính trên <b>${num(n)}</b> kỳ, từ #${first.ky} (${fmtD(first.date)}) đến #${last.ky} (${fmtD(last.date)}). ` +
-    `<b>Số kỳ chưa về</b>: 0 là vừa ra ở kỳ #${last.ky}; mỗi kỳ không ra thì cộng thêm 1, ra lại thì về 0. <b>TB số kỳ về</b>: trung bình bao nhiêu kỳ thì về 1 lần.` +
+    `<b>Số kỳ chưa về</b>: 0 là vừa ra ở kỳ #${last.ky}; mỗi kỳ không ra thì cộng thêm 1, ra lại thì về 0.` +
     (miss ? ` Nguồn dữ liệu thiếu ${num(miss)} kỳ trong khoảng này nên vài số có thể lệch một chút.` : "");
 
-  const sumHead = `<tr><th>Tổng</th><th>TB số<br>kỳ về</th><th>Số kỳ<br>chưa về</th></tr>`;
-  const sumRow = s => { const e = ev.get("s" + s); return `<tr><td><span class="sq">${s}</span></td><td class="av">${avg(e)}</td>${gapCell(e)}</tr>`; };
+  const sumHead = `<tr><th>Tổng</th><th>Số kỳ chưa về</th></tr>`;
+  const sumRow = s => { const e = ev.get("s" + s); return `<tr><td><span class="sq">${s}</span></td>${gapCell(e)}</tr>`; };
   const sumTable = list => `<div class="tr"><table class="gk">${sumHead}${list.map(sumRow).join("")}</table></div>`;
   $("gkSum").innerHTML = sumTable([3, 4, 5, 6, 7, 8, 9, 10]) + sumTable([18, 17, 16, 15, 14, 13, 12, 11]);
 
   const CATCOL = ["#9e9e9e", "#ff9800", "#1b5e20"], cmax = Math.max(...[0, 1, 2].map(c => ev.get("c" + c).count));
   $("gkCat").innerHTML = [0, 1, 2].map(c => {
     const e = ev.get("c" + c);
-    return `<div class="gkrow"><b>${CAT[c].toUpperCase()}</b><span><b>${num(e.count)}</b> lần về (${pct(e.count / n)}, lý thuyết ${pct(PCAT[c])}) · ${e.gap === 0 ? '<span class="now">vừa về</span>' : `chưa về <b>${num(e.gap)}</b> kỳ`}</span></div>` +
+    return `<div class="gkrow"><b>${CAT[c].toUpperCase()}</b><span><b>${num(e.count)}</b> lần về trong ${nDays} ngày (${pct(e.count / n)}, lý thuyết ${pct(PCAT[c])}) · ${e.gap === 0 ? '<span class="now">vừa về</span>' : `chưa về <b>${num(e.gap)}</b> kỳ`}</span></div>` +
       `<div class="bar"><i style="width:${(e.count / cmax * 100).toFixed(1)}%;background:${CATCOL[c]}"></i></div>`;
   }).join("");
 
   const F = [1, 2, 3, 4, 5, 6];
   const obl = (f, k) => Array(k).fill(`<span class="ball o">${f}</span>`).join("");
-  const head = label => `<tr><th>${label}</th><th>Số lần<br>về</th><th>TB số<br>kỳ về</th><th>Số kỳ<br>chưa về</th><th>Lâu nhất<br>chưa về</th></tr>`;
-  const line = (label, e) => `<tr><td>${label}</td><td>${num(e.count)}</td><td class="av">${avg(e)}</td>${gapCell(e)}<td>${e.lastKy === null ? never : num(e.longest)}</td></tr>`;
+  const head = label => `<tr><th>${label}</th><th>Số lần về<br>${nDays} ngày qua</th><th>Số kỳ<br>chưa về</th><th>Lâu nhất<br>chưa về</th></tr>`;
+  const line = (label, e) => `<tr><td>${label}</td><td>${num(e.count)}</td>${gapCell(e)}<td>${e.lastKy === null ? never : num(e.longest)}</td></tr>`;
   $("gkTrip").innerHTML = head("Bộ 3 số") + F.map(f => line(obl(f, 3), ev.get("t" + f))).join("") + line(obl("*", 3), ev.get("t*"));
   $("gkPair").innerHTML = head("Bộ 2 số") + F.map(f => line(obl(f, 2), ev.get("p" + f))).join("");
 }
