@@ -162,6 +162,15 @@ tr.total td{background:#fff8e1;font-weight:700}
 .chipbtn.sel{opacity:1;box-shadow:0 0 0 3px #fff}
 .bdbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;background:#fff;color:var(--ink);border-radius:10px;padding:8px 10px;font-size:.88rem}
 .bdbar .bdbtn{display:flex;gap:8px}
+.bdpick{background:rgba(255,255,255,.1);border-radius:10px;padding:8px;margin-top:10px;font-size:.85rem}
+.bdky{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.bdky input{padding:6px 8px;border:1px solid #c8e6c9;border-radius:8px;font-size:16px;min-width:0;background:#fff;color:var(--ink)}
+.bdky #bdKyIn{width:110px;text-align:center;font-weight:700}
+.bdky input[type=date]{width:150px}.bdky input[type=time]{width:110px}
+.kbtn{border:1px solid #c8e6c9;background:#fff;color:#0f3d27;border-radius:8px;padding:6px 10px;font-weight:800;cursor:pointer;touch-action:manipulation}
+.bdinfo{line-height:1.6}
+.bdinfo .ball{width:20px;height:20px;line-height:17px;font-size:.75rem;margin:0 1px}
+tr.wday td{background:#eef2f5 !important;text-align:left;font-size:.84rem;white-space:normal !important}
 .wmore{margin:12px 0 4px}
 .wmore summary{cursor:pointer;font-weight:600;color:var(--primary);margin-bottom:10px}
 @media (max-width:600px){.cell .n{font-size:1.1rem}.cell.big .n{font-size:1.2rem}.cell .x{font-size:.58rem}.mb{width:14px;height:14px;line-height:14px;font-size:.56rem;margin:0}.chip{min-width:20px;height:20px;line-height:16px;font-size:.52rem}}
@@ -203,6 +212,8 @@ tr.total td{background:#fff8e1;font-weight:700}
     <p class="note" style="text-align:left;margin:0 0 8px">Mua vé xong ở app nào thì bấm y như vậy trên bàn dưới (chọn mệnh giá rồi chạm vào ô, chạm nhiều lần để cộng thêm), rồi bấm <b>Ghi vào sổ</b>. Bàn này chỉ để ghi sổ, <b>không mua vé thật</b>.</p>
     <div class="bd" id="board"></div>
     <p class="note" id="wMsg" style="text-align:left;margin:8px 0 0"></p>
+    <h3 class="sub">📜 Lịch sử kết quả <small style="color:#888;font-weight:400">(60 kỳ gần nhất, giờ quay là giờ ước tính)</small></h3>
+    <div class="tr scroll" style="max-height:340px"><table id="hist"></table></div>
     <details class="wmore"><summary>Ghi vé kỳ cũ hoặc ghi tay</summary>
     <div class="wform">
       <label id="wKyL">Kỳ<input id="wKy" type="number" inputmode="numeric" oninput="this.dataset.touched = 1"></label>
@@ -213,6 +224,7 @@ tr.total td{background:#fff8e1;font-weight:700}
       </select></label>
       <label id="wPickL">Chọn<select id="wPick"></select></label>
       <label>Tiền đặt (đ)<input id="wStake" type="number" inputmode="numeric" step="10000" min="0" value="10000"></label>
+      <label id="wDateL" style="display:none">Ngày<input id="wDate" type="date"></label>
       <label id="wWinL" style="display:none">Tiền thắng (đ)<input id="wWin" type="number" inputmode="numeric" step="1000" min="0" value="0"></label>
       <button class="btn" onclick="addTicket()">➕ Ghi vé</button>
     </div>
@@ -273,8 +285,6 @@ tr.total td{background:#fff8e1;font-weight:700}
     <div class="model" id="model"></div>
   </div>
 
-  <h2 class="sec">📜 Lịch sử kết quả</h2>
-  <div class="tr scroll"><table id="hist"></table></div>
   <p class="note" id="foot"></p>
 </div>
 
@@ -575,6 +585,8 @@ function wTypeChanged() {
   $("wPickL").style.display = opts.length ? "" : "none";
   $("wWinL").style.display = ty === "manual" ? "" : "none";
   $("wKyL").style.display = ty === "manual" ? "none" : "";
+  $("wDateL").style.display = ty === "manual" ? "" : "none";
+  if (!$("wDate").value) $("wDate").value = ymd(dayVN());
 }
 function addTicket() {
   const ty = $("wType").value, stake = Math.round(+$("wStake").value || 0), msg = m => $("wMsg").innerHTML = m;
@@ -583,6 +595,7 @@ function addTicket() {
     const win = Math.round(+$("wWin").value || 0);
     if (stake < 0 || win < 0 || stake + win === 0) return msg("⚠️ Nhập tiền đặt và tiền thắng của vé đó.");
     t.win = win;
+    if ($("wDate").value) t.date = $("wDate").value.split("-").reverse().join("-");
   } else {
     if (stake < STAKE || stake % STAKE) return msg("⚠️ Tiền đặt phải là 10.000đ, 20.000đ, 30.000đ… (bội số của 10.000đ).");
     t.ky = parseInt($("wKy").value, 10);
@@ -620,6 +633,44 @@ function importWallet(file) {
   }).catch(e => { $("wMsg").innerHTML = `⚠️ Không đọc được file sao lưu (${e.message}).`; });
 }
 
+// Draw schedule: 159 draws a day, every 6 minutes from 06:00; #193990 was the first draw of 01/11/2026
+const KY_ANCHOR = 193990, KY_ANCHOR_DAY = Date.UTC(2026, 10, 1), KY_PER_DAY = 159;
+const dayIndex = ddmmyyyy => { const [d, m, y] = ddmmyyyy.split("-").map(Number); return Math.round((Date.UTC(y, m - 1, d) - KY_ANCHOR_DAY) / 86400e3); };
+// Approximate draw time "HH:MM" of a draw number
+function kyTime(ky) {
+  const i = ((ky - KY_ANCHOR) % KY_PER_DAY + KY_PER_DAY) % KY_PER_DAY, mins = 360 + 6 * i;
+  return String(Math.floor(mins / 60)).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0");
+}
+// The draw a ticket bought at this date and time goes into: the first draw at or after that time
+function kyAt(ddmmyyyy, hhmm) {
+  const [h, m] = hhmm.split(":").map(Number), i = Math.min(KY_PER_DAY - 1, Math.max(0, Math.ceil((h * 60 + m - 360) / 6)));
+  return KY_ANCHOR + dayIndex(ddmmyyyy) * KY_PER_DAY + i;
+}
+
+let boardKy = null; // null = follow the draw about to be drawn
+const boardKyNow = () => boardKy || nextKyNow();
+function setBoardKy(v) { const k = parseInt(v, 10); boardKy = k > 0 && k < nextKyNow() ? k : null; updateBoard(); }
+function stepKy(d) { setBoardKy(boardKyNow() + d); }
+function setBoardTime() {
+  const d = $("bdDate").value, t = $("bdTime").value;
+  if (d && t) setBoardKy(kyAt(d.split("-").reverse().join("-"), t));
+}
+function updateBoardKy() {
+  const ky = boardKyNow(), inp = $("bdKyIn"), x = draws.get(ky), total = Object.values(board).reduce((a, b) => a + b, 0);
+  if (document.activeElement !== inp) inp.value = ky;
+  const when = `khoảng ${kyTime(ky)}`;
+  let info;
+  if (ky >= nextKyNow()) info = `⏳ Kỳ sắp quay (${when}): ghi vào sẽ chờ kết quả.`;
+  else if (!x) info = `⚠️ Kỳ #${ky} (${when}) chưa có kết quả trong dữ liệu; vé vẫn được ghi và tự tính khi có.`;
+  else {
+    const won = Object.keys(board).reduce((a, k) => a + unitPay(cellTicket(k), x.d) * board[k] / STAKE, 0);
+    info = `🕘 Ghi bù kỳ đã quay ngày ${(x.date || "").replace(/-/g, "/")} ${when}: ra ${balls(x.d)} tổng ${sumD(x.d)}` +
+      (total ? ` → các ô đang chọn: đặt ${vnd(total)}, thắng ${vnd(won)}, ${money(won - total)}` : "");
+  }
+  $("bdKyInfo").innerHTML = info;
+  $("bdNow").style.display = boardKy ? "" : "none";
+}
+
 /* ---------- Betting board: tap cells to build the tickets, then record them in the book ---------- */
 const BOARD_CHIPS = [10000, 20000, 50000, 100000];
 let chip = 10000, board = {}; // board: cell key ("lon", "sum:12", "pair:6", ...) -> amount
@@ -641,7 +692,8 @@ function buildBoard() {
     `<div class="brow c7">${F.map(f => cell("trip:" + f, mbs(f, 3), "dk")).join("")}${cell("tripany", mbs("*", 3), "dk")}</div>` +
     `<h4>2 số trùng nhau <small>${xOf(PAY_PAIR)}</small></h4><div class="brow c6">${F.map(f => cell("pair:" + f, mbs(f, 2), "dk")).join("")}</div>` +
     `<h4>1 số <small>ra 1 con x1,2 · 2 con x2 · 3 con x3</small></h4><div class="brow c6">${F.map(f => cell("face:" + f, mbs(f, 1), "dk")).join("")}</div>` +
-    `<div class="bdbar"><div><b id="bdKy"></b><br><span id="bdTotal"></span></div><div class="bdbtn"><button class="btn ghost" onclick="clearBoard()">↺ Chọn lại</button><button class="btn" onclick="confirmBoard()">✔ Ghi vào sổ</button></div></div>`;
+    `<div class="bdpick"><div class="bdky"><span>Ghi cho kỳ</span><button class="kbtn" onclick="stepKy(-1)">−</button><input id="bdKyIn" type="number" inputmode="numeric" onchange="setBoardKy(this.value)"><button class="kbtn" onclick="stepKy(1)">+</button><button class="kbtn" id="bdNow" onclick="setBoardKy(null)">↻ Kỳ sắp quay</button></div><div class="bdky"><span>hoặc giờ mua vé</span><input id="bdDate" type="date" onchange="setBoardTime()"><input id="bdTime" type="time" onchange="setBoardTime()"></div><div class="bdinfo" id="bdKyInfo"></div></div><div class="bdbar"><div><span id="bdTotal"></span></div><div class="bdbtn"><button class="btn ghost" onclick="clearBoard()">↺ Chọn lại</button><button class="btn" onclick="confirmBoard()">✔ Ghi vào sổ</button></div></div>`;
+  $("bdDate").value = ymd(dayVN());
   pickChip(chip);
   updateBoard();
 }
@@ -655,21 +707,21 @@ function updateBoard() {
   });
   const total = Object.values(board).reduce((a, b) => a + b, 0);
   $("bdTotal").innerHTML = `Tiền vé tạm tính: <b>${vnd(total)}</b>`;
-  $("bdKy").textContent = `Kỳ #${nextKyNow()}`;
+  updateBoardKy();
 }
 function confirmBoard() {
   const keys = Object.keys(board), total = Object.values(board).reduce((a, b) => a + b, 0);
   if (!keys.length) return $("wMsg").innerHTML = "⚠️ Chọn mệnh giá rồi chạm vào ô để đặt, sau đó mới bấm Ghi vào sổ.";
-  const ky = nextKyNow(), day = dayVN(), cap = +localStorage.getItem(CAP) || 0, after = stakedOn(day) + total;
-  if (cap && after > cap && !confirm(`Ghi các vé này thì tiền đặt hôm nay lên ${vnd(after)}, vượt hạn mức ${vnd(cap)} bạn tự đặt. Vẫn ghi?`)) return;
+  const ky = boardKyNow(), x = draws.get(ky), day = (x && x.date) || dayVN(), cap = +localStorage.getItem(CAP) || 0, after = stakedOn(day) + total;
+  if (cap && after > cap && !confirm(`Ghi các vé này thì tiền đặt ngày ${day.replace(/-/g, "/")} lên ${vnd(after)}, vượt hạn mức ${vnd(cap)} bạn tự đặt. Vẫn ghi?`)) return;
   keys.forEach((k, i) => wallet.push({ id: Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5), ...cellTicket(k), ky, stake: board[k], date: day }));
   saveWallet();
-  $("wMsg").innerHTML = `✅ Đã ghi ${keys.length} vé cho kỳ #${ky}, tổng ${vnd(total)}: ${keys.map(k => ticketName(cellTicket(k)) + " " + kfmt(board[k])).join(", ")}. Có kết quả là trang tự dò.`;
+  $("wMsg").innerHTML = `✅ Đã ghi ${keys.length} vé cho kỳ #${ky}, tổng ${vnd(total)}: ${keys.map(k => ticketName(cellTicket(k)) + " " + kfmt(board[k])).join(", ")}. ` + (x ? `Kỳ này ra ${x.d.join("-")}: thắng ${vnd(keys.reduce((a, k) => a + unitPay(cellTicket(k), x.d) * board[k] / STAKE, 0))}.` : "Có kết quả là trang tự dò.");
   board = {}; updateBoard(); renderWallet();
 }
 
 function renderWallet() {
-  if ($("bdKy")) $("bdKy").textContent = `Kỳ #${nextKyNow()}`;
+  if ($("bdKyIn")) updateBoardKy();
   const k = $("wKy"), nk = nextKyNow();
   if (!k.dataset.touched && nk) k.value = nk;
   const cap = +localStorage.getItem(CAP) || 0;
@@ -702,13 +754,24 @@ function renderWallet() {
       `Thực tế bạn nhận <b>${vnd(won)}</b>: ${won >= exp ? "đang may hơn mức trung bình, nhưng đánh lâu sẽ kéo về mức kỳ vọng." : "đang kém hơn mức trung bình."}`;
   } else $("wExp").style.display = "none";
 
-  const list = rows.slice().sort((a, b) => (b.t.ky || 0) - (a.t.ky || 0) || (b.t.id > a.t.id ? 1 : -1));
+  // Newest day first; inside a day by draw number, newest first; each day opens with its own totals
+  const list = rows.slice().sort((a, b) => ymd(b.r.date).localeCompare(ymd(a.r.date)) || (b.t.ky || 0) - (a.t.ky || 0) || (b.t.id > a.t.id ? 1 : -1));
+  const dayHead = date => {
+    const rs = list.filter(x => x.r.date === date), done = rs.filter(x => x.r.done), wait = rs.length - done.length;
+    const st = done.reduce((a, x) => a + x.t.stake, 0), won = done.reduce((a, x) => a + x.r.win, 0);
+    return `<tr class="wday"><td colspan="6">📅 <b>${date.replace(/-/g, "/")}</b> · ${rs.length} vé · đặt ${vnd(st)} · thắng ${vnd(won)} · ${money(won - st)}${wait ? ` · ⏳ ${wait} vé chờ` : ""}</td></tr>`;
+  };
+  let lastDay = "";
   $("wList").innerHTML = `<tr><th>Kỳ</th><th>Vé</th><th>Tiền đặt</th><th>Kết quả</th><th>Thắng<br><small>lời / lỗ</small></th><th></th></tr>` +
-    (list.length ? list.map(({ t, r }) => `<tr><td>${t.ky ? "#" + t.ky : "–"}<br><small style="color:#888">${r.date.replace(/-/g, "/")}</small></td><td>${ticketName(t)}</td><td>${vnd(t.stake)}</td>` +
-      `<td>${t.type === "manual" ? "–" : r.done ? balls(r.d) + ` <small>(${sumD(r.d)})</small>` : (t.ky >= nextKyNow() ? "⏳ chờ quay" : "⏳ chưa có kết quả")}</td>` +
-      `<td>${r.done ? (r.win ? vnd(r.win) : "0đ") + "<br>" + money(r.win - t.stake) : "–"}</td>` +
-      `<td><button class="wdel" title="Xoá vé" onclick="delTicket('${t.id}')">✕</button></td></tr>`).join("")
-      : `<tr><td colspan="7">Chưa có vé nào. Chạm vào ô trên bàn rồi bấm "Ghi vào sổ".</td></tr>`);
+    (list.length ? list.map(({ t, r }) => {
+      const head = r.date !== lastDay ? dayHead(r.date) : "";
+      lastDay = r.date;
+      return head + `<tr><td>${t.ky ? "#" + t.ky + `<br><small style="color:#888">${kyTime(t.ky)}</small>` : "–"}</td><td>${ticketName(t)}</td><td>${vnd(t.stake)}</td>` +
+        `<td>${t.type === "manual" ? "–" : r.done ? balls(r.d) + ` <small>(${sumD(r.d)})</small>` : (t.ky >= nextKyNow() ? "⏳ chờ quay" : "⏳ chưa có kết quả")}</td>` +
+        `<td>${r.done ? (r.win ? vnd(r.win) : "0đ") + "<br>" + money(r.win - t.stake) : "–"}</td>` +
+        `<td><button class="wdel" title="Xoá vé" onclick="delTicket('${t.id}')">✕</button></td></tr>`;
+    }).join("")
+      : `<tr><td colspan="6">Chưa có vé nào. Chạm vào ô trên bàn rồi bấm "Ghi vào sổ".</td></tr>`);
 }
 
 /* ---------- Draw gaps ("số kỳ chưa về"), like the Vietlott app ---------- */
@@ -886,9 +949,9 @@ function render() {
   renderTrack(rows, pr);
   renderDays(all, rows);
   renderModel(all);
-  $("hist").innerHTML = `<tr><th>Kỳ</th><th>Ngày</th><th>Kết quả</th><th>Tổng</th><th>Lớn/Hoà/Nhỏ</th><th>Số trùng</th></tr>` +
+  $("hist").innerHTML = `<tr><th>Kỳ</th><th>Ngày · giờ</th><th>Kết quả</th><th>Tổng</th><th>Lớn/Hoà/Nhỏ</th><th>Số trùng</th></tr>` +
     all.slice(-60).reverse().map(x => { const t = sumD(x.d), c = catIdx(t), k = distinct(x.d);
-      return `<tr><td>#${x.ky}</td><td>${(x.date || "").replace(/-/g, "/")}</td><td>${balls(x.d)}</td><td><b>${t}</b></td><td><span class="bt ${CATCLS[c]}">${CAT[c]}</span></td><td>${k === 3 ? "–" : k === 2 ? "Hai số " + x.d.find(v => cnt(x.d, v) === 2) : "<b>Ba số " + x.d[0] + "</b>"}</td></tr>`; }).join("");
+      return `<tr><td>#${x.ky}</td><td>${(x.date || "").replace(/-/g, "/")} <small style="color:#888">${kyTime(x.ky)}</small></td><td>${balls(x.d)}</td><td><b>${t}</b></td><td><span class="bt ${CATCLS[c]}">${CAT[c]}</span></td><td>${k === 3 ? "–" : k === 2 ? "Hai số " + x.d.find(v => cnt(x.d, v) === 2) : "<b>Ba số " + x.d[0] + "</b>"}</td></tr>`; }).join("");
   $("foot").textContent = `Dữ liệu: ${n} kỳ (${liveKys.size} kỳ thu trực tiếp từ khi mở trang). ` + (HOSTED
     ? `Nguồn xosohomnay.com, kèm dữ liệu từ xosohomnay.com và vietlott.vn tự cập nhật khoảng 5–10 phút một lần${dataUpdated ? " (lần gần nhất " + new Date(dataUpdated).toLocaleTimeString("vi-VN") + ")" : ""}.`
     : "Nguồn xosohomnay.com, tự chuyển sang vietlott.vn khi xosohomnay.com lỗi (cần mở bằng Mo-Bingo18.bat). Kỳ mới chỉ được lưu khi trang đang mở.");
