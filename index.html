@@ -407,7 +407,8 @@ const HOT_WINDOW = 160;
 const prevD = (all, i) => all[i - 1].d;
 // Each method: pick(L, C, all, i, pr) -> value; i is the index of the draw being predicted
 const LEARN_TYPES = [
-  { key: "sum", name: "Cộng tổng", hit: (v, d) => sumD(d) === v, show: String, methods: [
+  { key: "sum", name: "Cộng tổng", hit: (v, d) => sumD(d) === v, show: String, keys: v => [v, "c" + catIdx(v)],
+    rank: (L, C, all, i) => { const ps = sumD(prevD(all, i)), sc = s => (C.sum[ps][s] + K_SUM * PS(s)) / (C.nSum[ps] + K_SUM); return SUMS.slice().sort((a, b) => sc(b) - sc(a)); }, methods: [
     { name: "Tổng hay ra nhất trong cửa dự đoán (cách cũ)", pick: (L, C, all, i, pr) => pr.model.sum },
     { name: "Theo tổng kỳ trước (Markov, mọi tổng)", pick: (L, C, all, i) => { const ps = sumD(prevD(all, i)); return bestOf(SUMS, s => (C.sum[ps][s] + K_SUM * PS(s)) / (C.nSum[ps] + K_SUM)); } },
     { name: "Tổng ra nhiều nhất 160 kỳ gần", pick: L => bestOf(SUMS, s => L.hot.sum[s] + PS(s)) },
@@ -426,20 +427,20 @@ const LEARN_TYPES = [
     { name: "Lặp lại cửa kỳ trước", pick: (L, C, all, i) => catIdx(sumD(prevD(all, i))) },
     { name: "Cửa vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf([0, 1, 2], c => (i - L.last.cat[c]) * PCAT[c]) },
   ] },
-  { key: "face", name: "Chọn 1 số", hit: (v, d) => d.includes(v), show: String, methods: [
+  { key: "face", name: "Chọn 1 số", hit: (v, d) => d.includes(v), show: String, rank: (L, C, all, i, pr) => FACES.slice().sort((a, b) => pr.faceP[b] - pr.faceP[a]), methods: [
     { name: "Mô hình Markov (theo cửa kỳ trước)", pick: (L, C, all, i, pr) => pr.model.face },
     { name: "Số ra nhiều nhất 160 kỳ gần", pick: L => bestOf(FACES, f => L.hot.face[f]) },
     { name: "Số vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf(FACES, f => i - L.last.face[f]) },
     { name: "Lặp lại số của kỳ trước", pick: (L, C, all, i) => { const d = prevD(all, i); return bestOf(d, f => cnt(d, f)); } },
     { name: "Luôn đánh số 6", pick: () => 6, fixed: true },
   ] },
-  { key: "pair", name: "Hai số trùng", hit: (v, d) => cnt(d, v) >= 2, show: v => `${v}-${v}`, methods: [
+  { key: "pair", name: "Hai số trùng", hit: (v, d) => cnt(d, v) >= 2, show: v => `${v}-${v}`, rank: (L, C, all, i, pr) => FACES.slice().sort((a, b) => pr.pairP[b] - pr.pairP[a]), methods: [
     { name: "Mô hình Markov (theo cửa kỳ trước)", pick: (L, C, all, i, pr) => pr.model.pair },
     { name: "Cặp ra nhiều nhất 160 kỳ gần", pick: L => bestOf(FACES, f => L.hot.pair[f]) },
     { name: "Cặp vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf(FACES, f => i - L.last.pair[f]) },
     { name: "Luôn đánh cặp 6-6", pick: () => 6, fixed: true },
   ] },
-  { key: "trip", name: "Ba số trùng", hit: (v, d) => cnt(d, v) === 3, show: v => `${v}-${v}-${v}`, methods: [
+  { key: "trip", name: "Ba số trùng", hit: (v, d) => cnt(d, v) === 3, show: v => `${v}-${v}-${v}`, rank: (L, C, all, i, pr) => FACES.slice().sort((a, b) => pr.tripP[b] - pr.tripP[a]), methods: [
     { name: "Mô hình Markov (theo cửa kỳ trước)", pick: (L, C, all, i, pr) => pr.model.trip },
     { name: "Bộ ba ra nhiều nhất 160 kỳ gần", pick: L => bestOf(FACES, f => L.hot.trip[f]) },
     { name: "Bộ ba vắng lâu nhất (nuôi)", pick: (L, C, all, i) => bestOf(FACES, f => i - L.last.trip[f]) },
@@ -447,9 +448,10 @@ const LEARN_TYPES = [
   ] },
 ];
 const SUM_METHODS = LEARN_TYPES.find(t => t.key === "sum").methods;
+const HOLD_MAX = 2; // at most this many draws in a row with the same pick
 
 function newLearner() {
-  const T = LEARN_TYPES.map(t => { const z = () => t.methods.map(() => 0); return { hits: z(), run: z(), maxRun: z(), use: 0, switches: [], byDay: {}, picks: null }; });
+  const T = LEARN_TYPES.map(t => { const z = () => t.methods.map(() => 0); return { hits: z(), run: z(), maxRun: z(), use: 0, switches: [], byDay: {}, picks: null, used: [], chosen: null, usedHits: 0, usedRun: 0, usedMaxRun: 0, held: false }; });
   const arr = (n, v) => Array(n).fill(v);
   return { T, n: 0, day: null, win: [],
     hot: { sum: arr(19, 0), cat: arr(3, 0), face: arr(7, 0), pair: arr(7, 0), trip: arr(7, 0) },
@@ -470,7 +472,16 @@ function learnPick(L, C, all, i, pr, date) {
       S.use = best;
     }
     S.picks = t.methods.map(m => m.pick(L, C, all, i, pr));
-    pr.sel[t.key] = S.picks[S.use]; pr.meth[t.key] = S.use;
+    let v = S.picks[S.use];
+    S.held = false;
+    if (t.rank) {
+      // Blocked when the last HOLD_MAX played picks all share a key with this one
+      const recent = S.used.slice(-HOLD_MAX), keys = t.keys || (x => [x]);
+      const blocked = x => recent.length === HOLD_MAX && keys(x).some(k => recent.every(u => keys(u).includes(k)));
+      if (blocked(v)) { const alt = t.rank(L, C, all, i, pr).find(x => !blocked(x)); if (alt !== undefined) { v = alt; S.held = true; } }
+    }
+    S.chosen = v;
+    pr.sel[t.key] = v; pr.meth[t.key] = S.use;
   });
   if (newDay) L.day = date;
   // The page shows and scores what the chosen methods picked
@@ -483,8 +494,11 @@ function learnPick(L, C, all, i, pr, date) {
 function learnScore(L, d, date) {
   L.n++;
   LEARN_TYPES.forEach((t, ti) => {
-    const S = L.T[ti], rec = S.byDay[date] || (S.byDay[date] = { n: 0, hits: t.methods.map(() => 0), use: S.use });
+    const S = L.T[ti], rec = S.byDay[date] || (S.byDay[date] = { n: 0, hits: t.methods.map(() => 0), use: S.use, usedHits: 0 });
     rec.n++;
+    // What the page actually played, after the no-holding rule
+    if (t.hit(S.chosen, d)) { S.usedHits++; rec.usedHits++; S.usedRun = 0; } else { S.usedRun++; if (S.usedRun > S.usedMaxRun) S.usedMaxRun = S.usedRun; }
+    S.used.push(S.chosen); if (S.used.length > 10) S.used.shift();
     S.picks.forEach((v, k) => {
       if (t.hit(v, d)) { S.hits[k]++; rec.hits[k]++; S.run[k] = 0; }
       else { S.run[k]++; if (S.run[k] > S.maxRun[k]) S.maxRun[k] = S.run[k]; }
@@ -533,7 +547,7 @@ let learnSig = "";
 function renderLearn() {
   const L = bt && bt.L;
   if (!L || !L.n) return;
-  const sig = [L.n, L.day, ...L.T.map(S => S.use)].join("|");
+  const sig = [L.n, L.day, ...L.T.map(S => S.use + ":" + S.chosen)].join("|");
   if (sig === learnSig) return;
   learnSig = sig;
   const rate = (h, n, dp = 1) => n ? `${h}/${n} (${pct(h / n, dp)})` : "–";
@@ -544,7 +558,9 @@ function renderLearn() {
     LEARN_TYPES.map((t, ti) => {
       const S = L.T[ti], today = S.byDay[L.day], prev = prevDay && S.byDay[prevDay], dp = t.key === "trip" ? 2 : 1;
       const order = t.methods.map((m, k) => k).sort((a, b) => S.hits[b] - S.hits[a]);
-      return `<tr class="lgrp"><td colspan="6">${t.name}</td></tr>` + order.map(k => `<tr${k === S.use ? ' class="total"' : ""}><td style="text-align:left">${k === S.use ? "⭐ " : ""}${t.methods[k].name}${k === S.use ? (t.methods[k].forced ? " <small>(đang dùng theo lựa chọn của bạn)</small>" : " <small>(đang dùng)</small>") : t.methods[k].fixed ? " <small style=\"color:#999\">(mốc so sánh, không dùng)</small>" : ""}</td>` +
+      const played = `<tr class="total"><td style="text-align:left">🎯 <b>Số trang đánh thật</b> <small>(cách ⭐ + luật không ôm số)</small></td><td><b>${t.show(S.chosen)}</b>${S.held ? "<br><small>đổi số vì đã " + HOLD_MAX + " kỳ liền</small>" : ""}</td>` +
+        `<td>${rate(S.usedHits, L.n, dp)}</td><td>${prev ? rate(prev.usedHits, prev.n, dp) : "–"}</td><td>${today ? rate(today.usedHits, today.n, dp) : "–"}</td><td>${S.usedMaxRun} · ${S.usedRun}</td></tr>`;
+      return `<tr class="lgrp"><td colspan="6">${t.name}</td></tr>` + played + order.map(k => `<tr><td style="text-align:left">${k === S.use ? "⭐ " : ""}${t.methods[k].name}${k === S.use ? (t.methods[k].forced ? " <small>(đang dùng theo lựa chọn của bạn)</small>" : " <small>(đang dùng)</small>") : t.methods[k].fixed ? " <small style=\"color:#999\">(mốc so sánh, không dùng)</small>" : ""}</td>` +
         `<td><b>${t.show(S.picks[k])}</b></td><td>${rate(S.hits[k], L.n, dp)}</td><td>${prev ? rate(prev.hits[k], prev.n, dp) : "–"}</td><td>${today ? rate(today.hits[k], today.n, dp) : "–"}</td><td>${S.maxRun[k]} · ${S.run[k]}</td></tr>`).join("");
     }).join("");
 
@@ -554,12 +570,12 @@ function renderLearn() {
     if (!rec) return "<td>–</td>";
     const best = rec.hits.reduce((b, h, k) => !t.methods[k].fixed && (t.methods[b].fixed || h > rec.hits[b]) ? k : b, 0);
     const sw = S.switches.find(x => x.from != null && ymd(x.day) > ymd(day) && !days.some(o => ymd(o) > ymd(day) && ymd(o) < ymd(x.day)));
-    return `<td><b>${pct(rec.hits[rec.use] / rec.n, dp)}</b> <small>${rec.hits[rec.use]}/${rec.n}</small><br><small>dùng: ${t.methods[rec.use].name}</small>` +
+    return `<td><b>${pct(rec.usedHits / rec.n, dp)}</b> <small>${rec.usedHits}/${rec.n}</small><br><small>dùng: ${t.methods[rec.use].name}</small>` +
       (best !== rec.use && rec.hits[best] > rec.hits[rec.use] ? `<br><small>tốt nhất hôm đó: ${t.methods[best].name} (${pct(rec.hits[best] / rec.n, dp)})</small>` : "") +
       (sw ? `<br><small class="won">→ hôm sau đổi sang: ${t.methods[sw.use].name}</small>` : "") + `</td>`;
   }).join("") + `</tr>`).join("");
 
-  $("learnNote").innerHTML = `Mỗi kỳ, tất cả các cách cùng đoán và được chấm điểm; đầu mỗi ngày trang tự chọn cách đang trúng nhiều nhất trong các cách đổi số theo từng kỳ (tính trên toàn bộ ${L.n.toLocaleString("vi-VN")} kỳ đã chấm) để dùng cả ngày. Nhật ký ghi lại mỗi ngày dùng cách nào, trúng bao nhiêu và có đổi cách hay không.<br>` +
+  $("learnNote").innerHTML = `Mỗi kỳ, tất cả các cách cùng đoán và được chấm điểm; đầu mỗi ngày trang tự chọn cách đang trúng nhiều nhất trong các cách đổi số theo từng kỳ (tính trên toàn bộ ${L.n.toLocaleString("vi-VN")} kỳ đã chấm) để dùng cả ngày. Trang <b>không ôm số</b>: không đánh cùng một số (với Cộng tổng: cùng một số hoặc cùng một cửa) quá ${HOLD_MAX} kỳ liền; tới kỳ kế tiếp sẽ đổi sang số có khả năng cao kế tiếp theo mô hình. Dòng 🎯 là kết quả của các số trang đánh thật. Nhật ký ghi lại mỗi ngày dùng cách nào, trúng bao nhiêu và có đổi cách hay không.<br>` +
     `<b>Giới hạn thật:</b> kết quả là xúc xắc ngẫu nhiên, nên các cách chỉ hơn kém nhau chút ít và dao động quanh xác suất lý thuyết: Lớn hoặc Nhỏ 37,5%, Cộng tổng tốt nhất 12,5% (tổng 10, 11), Chọn 1 số 42,1%, một cặp 7,4%, một bộ ba 0,46%. ` +
     `Ví dụ Cộng tổng chỉ trúng khoảng 1 kỳ trong 8: sai 10 kỳ liền xảy ra khoảng 26% thời gian, sai 15 kỳ liền khoảng 13,5%, và gần như ngày nào cũng có lúc sai liền 20–30 kỳ. Các dòng "mốc so sánh" là đánh cố định một số (trang không dùng), để bạn thấy cách đổi số mỗi kỳ có hơn được không. Tự học giúp bỏ các cách kém, nhưng không cách nào vượt hẳn được xác suất lý thuyết.`;
 }
