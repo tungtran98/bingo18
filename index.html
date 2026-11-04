@@ -404,15 +404,15 @@ const range = (a, b) => Array.from({ length: b - a + 1 }, (_, k) => a + k);
 const SUMS = range(3, 18), FACES = range(1, 6);
 const bestOf = (list, score) => list.reduce((b, v) => score(v) > score(b) ? v : b, list[0]);
 const HOT_WINDOW = 160;
-// Most likely totals in a cycle: two Hoà (10, 11 = 12.5% each) then one Lớn/Nhỏ (12 or 9 = 11.6%)
-const SUM_CYCLE = [10, 11, 12, 10, 11, 9];
+// Most likely Lớn and Nhỏ totals in turn (12 and 9 = 11.6% each), so the category ticket is Lớn/Nhỏ (37.5%), never Hoà (25%)
+const SUM_CYCLE = [12, 9];
 const kyAt = (all, i) => i < all.length ? all[i].ky : nextKyNow();
 const prevD = (all, i) => all[i - 1].d;
 // Each method: pick(L, C, all, i, pr) -> value; i is the index of the draw being predicted
 const LEARN_TYPES = [
   { key: "sum", name: "Cộng tổng", hit: (v, d) => sumD(d) === v, show: String, keys: v => [v, "c" + catIdx(v)],
     rank: () => SUMS.slice().sort((a, b) => PS(b) - PS(a)), methods: [
-    { name: "Xoay vòng tổng dễ ra nhất 10 → 11 → 12 → 10 → 11 → 9", pick: (L, C, all, i) => SUM_CYCLE[kyAt(all, i) % SUM_CYCLE.length], forced: true },
+    { name: "Xen kẽ 12 (Lớn) và 9 (Nhỏ)", pick: (L, C, all, i) => SUM_CYCLE[kyAt(all, i) % SUM_CYCLE.length], forced: true },
     { name: "Tổng hay ra nhất trong cửa dự đoán (cách cũ)", pick: (L, C, all, i, pr) => pr.model.sum },
     { name: "Theo tổng kỳ trước (Markov, mọi tổng)", pick: (L, C, all, i) => { const ps = sumD(prevD(all, i)); return bestOf(SUMS, s => (C.sum[ps][s] + K_SUM * PS(s)) / (C.nSum[ps] + K_SUM)); } },
     { name: "Tổng ra nhiều nhất 160 kỳ gần", pick: L => bestOf(SUMS, s => L.hot.sum[s] + PS(s)) },
@@ -579,7 +579,7 @@ function renderLearn() {
       (sw ? `<br><small class="won">→ hôm sau đổi sang: ${t.methods[sw.use].name}</small>` : "") + `</td>`;
   }).join("") + `</tr>`).join("");
 
-  $("learnNote").innerHTML = `Mỗi kỳ, tất cả các cách cùng đoán và được chấm điểm; đầu mỗi ngày trang tự chọn cách đang trúng nhiều nhất trong các cách đổi số theo từng kỳ (tính trên toàn bộ ${L.n.toLocaleString("vi-VN")} kỳ đã chấm) để dùng cả ngày. Riêng <b>Cộng tổng</b> luôn dùng cách xoay vòng 10 → 11 → 12 → 10 → 11 → 9 theo số kỳ: đây là 4 tổng dễ ra nhất (10, 11 có 27/216 = 12,5%; 9, 12 có 25/216 = 11,6%), nên trung bình trúng khoảng 12,2%, cao nhất có thể khi không đánh cùng một số hay cùng một cửa quá 2 kỳ liền; các cách khác chỉ để so sánh. Trang <b>không ôm số</b>: không đánh cùng một số (với Cộng tổng: cùng một số hoặc cùng một cửa) quá ${HOLD_MAX} kỳ liền; tới kỳ kế tiếp sẽ đổi sang số có khả năng cao kế tiếp theo mô hình. Dòng 🎯 là kết quả của các số trang đánh thật. Nhật ký ghi lại mỗi ngày dùng cách nào, trúng bao nhiêu và có đổi cách hay không.<br>` +
+  $("learnNote").innerHTML = `Mỗi kỳ, tất cả các cách cùng đoán và được chấm điểm; đầu mỗi ngày trang tự chọn cách đang trúng nhiều nhất trong các cách đổi số theo từng kỳ (tính trên toàn bộ ${L.n.toLocaleString("vi-VN")} kỳ đã chấm) để dùng cả ngày. Riêng <b>Cộng tổng</b> luôn đánh xen kẽ 12 (Lớn) và 9 (Nhỏ) theo số kỳ: đây là tổng dễ ra nhất của cửa Lớn và cửa Nhỏ (25/216 = 11,6% mỗi tổng), nên vé cửa đi theo tổng luôn là Lớn hoặc Nhỏ (37,5%) thay vì Hoà (25%); các cách khác chỉ để so sánh. Trang <b>không ôm số</b>: không đánh cùng một số (với Cộng tổng: cùng một số hoặc cùng một cửa) quá ${HOLD_MAX} kỳ liền; tới kỳ kế tiếp sẽ đổi sang số có khả năng cao kế tiếp theo mô hình. Dòng 🎯 là kết quả của các số trang đánh thật. Nhật ký ghi lại mỗi ngày dùng cách nào, trúng bao nhiêu và có đổi cách hay không.<br>` +
     `<b>Giới hạn thật:</b> kết quả là xúc xắc ngẫu nhiên, nên các cách chỉ hơn kém nhau chút ít và dao động quanh xác suất lý thuyết: Lớn hoặc Nhỏ 37,5%, Cộng tổng tốt nhất 12,5% (tổng 10, 11), Chọn 1 số 42,1%, một cặp 7,4%, một bộ ba 0,46%. ` +
     `Ví dụ Cộng tổng chỉ trúng khoảng 1 kỳ trong 8: sai 10 kỳ liền xảy ra khoảng 26% thời gian, sai 15 kỳ liền khoảng 13,5%, và gần như ngày nào cũng có lúc sai liền 20–30 kỳ. Các dòng "mốc so sánh" là đánh cố định một số (trang không dùng), để bạn thấy cách đổi số mỗi kỳ có hơn được không. Tự học giúp bỏ các cách kém, nhưng không cách nào vượt hẳn được xác suất lý thuyết.`;
 }
@@ -659,10 +659,10 @@ function renderPrediction(all, nextKy, pr) {
   $("pCat").textContent = CAT[pr.cat].toUpperCase();
   $("pCatTags").innerHTML = [`Trúng nhận ${vnd(PAY_CAT[pr.cat])} / vé 10.000đ`].map(t => `<span class="tag">${t}</span>`).join("");
   $("pCatNote").innerHTML = `Kỳ #${pr.prevKy} ra <b>${CAT[pr.prevCat]}</b> (tổng ${pr.prevSum}). Trong lịch sử có ${pr.nCat} lần kỳ trước ra ${CAT[pr.prevCat]}; mô hình Markov ước tính kỳ sau: ` +
-    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Cửa ở đây <b>đi theo Cộng tổng ${pr.sumPick}</b> ở ô bên phải (${pr.sumPick} thuộc cửa ${CAT[pr.cat]}), để hai vé luôn khớp nhau. Đổi lại, khi tổng gợi ý là 10 hoặc 11 thì vé cửa là Hoà, trúng khoảng 25% thay vì 37,5% của Lớn hoặc Nhỏ.`;
+    CAT.map((c, k) => `${c} ${pct(pr.catP[k])}`).join(" · ") + ` (lý thuyết 37,5 · 25 · 37,5%). Cửa ở đây <b>đi theo Cộng tổng ${pr.sumPick}</b> ở ô bên phải (${pr.sumPick} thuộc cửa ${CAT[pr.cat]}), để hai vé luôn khớp nhau. Tổng gợi ý luôn là 12 hoặc 9, nên vé cửa luôn là Lớn hoặc Nhỏ (mỗi cửa 37,5%), không đánh Hoà (25%).`;
   $("pDice").innerHTML = pr.combo.map(v => `<span class="bigdice">${v}</span>`).join("");
   $("pDiceTags").innerHTML = [`Cộng tổng: ${pr.sumPick}`, `Chọn 1 số: ${pr.face}`, `Hai số trùng: ${pr.pair}-${pr.pair}`, `Ba số trùng: ${pr.trip}-${pr.trip}-${pr.trip}`].map(t => `<span class="tag">${t}</span>`).join("");
-  $("pDiceNote").textContent = `Cộng tổng ${pr.sumPick} theo cách "${SUM_METHODS[pr.sumMethod].name}"${SUM_METHODS[pr.sumMethod].forced ? " (kỳ kế tiếp: " + SUM_CYCLE[(nextKyNow() + 1) % SUM_CYCLE.length] + "), trung bình trúng khoảng 12,2%, mức cao nhất có thể khi không ôm số" : ", cách đang trúng nhiều nhất (trang tự chọn lại mỗi ngày)"}; cửa ở ô bên trái đi theo tổng này. Bộ 3 số trên chỉ để minh hoạ một kết quả có tổng ${pr.sumPick}. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
+  $("pDiceNote").textContent = `Cộng tổng ${pr.sumPick} theo cách "${SUM_METHODS[pr.sumMethod].name}"${SUM_METHODS[pr.sumMethod].forced ? " (kỳ kế tiếp: " + SUM_CYCLE[(nextKyNow() + 1) % SUM_CYCLE.length] + "), trúng khoảng 11,6%, và giúp vé cửa luôn là Lớn/Nhỏ (37,5%)" : ", cách đang trúng nhiều nhất (trang tự chọn lại mỗi ngày)"}; cửa ở ô bên trái đi theo tổng này. Bộ 3 số trên chỉ để minh hoạ một kết quả có tổng ${pr.sumPick}. Chọn 1 số ${pr.face}: mô hình ${pct(pr.faceP[pr.face])} (lý thuyết 42,1%) · Cặp ${pr.pair}-${pr.pair}: ${pct(pr.pairP[pr.pair], 2)} (lý thuyết 7,41%) · Ba số ${pr.trip}: ${pct(pr.tripP[pr.trip], 2)} (lý thuyết 0,46%)`;
   $("honest").innerHTML = `⚠️ <b>Đọc trước khi đánh:</b> dự đoán đổi theo từng kỳ, dựa trên mô hình Markov: sau những kỳ giống kỳ vừa ra, kỳ kế tiếp trong lịch sử hay ra gì nhất (có làm mượt để tránh bị lệch do ít dữ liệu). ` +
     `Hiện kiểm định chưa thấy kỳ trước ảnh hưởng kỳ sau, nên cơ hội trúng thật vẫn bằng xác suất lý thuyết. Theo cơ cấu giải của Vietlott, mỗi vé 10.000đ chỉ trả lại trung bình 5.000–5.700đ, nên đánh lâu dài chắc chắn lỗ. Hãy đặt ít.`;
 }
