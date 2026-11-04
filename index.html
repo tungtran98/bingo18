@@ -45,6 +45,12 @@ h1{text-align:center;color:var(--primary);margin:0 0 6px;font-size:2.1rem}
 .three-last span{background:#fff;border:1px solid #ddd;border-radius:6px;padding:2px 6px;font-size:.78rem}
 .three-last .w{border-color:#66bb6a;background:#e8f5e9;color:#2e7d32;font-weight:700}
 @media (max-width:600px){.three-tiles{grid-template-columns:repeat(2,1fr)}#threeDays .hm{display:none}#threeDays td,#threeDays th{padding:7px 6px}}
+.others{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 4px}
+.others>div{background:#fff;border:1px solid #90caf9;border-radius:10px;padding:10px;min-width:0}
+.others h4{margin:0 0 2px;color:var(--blue);font-size:.98rem}
+.others .nx{font-size:.85rem;color:#555;margin-bottom:6px}.others .nx b{font-size:1.05rem;color:var(--primary)}
+.others td,.others th{padding:6px 6px;font-size:.84rem}
+@media (max-width:600px){.others{grid-template-columns:1fr}}
 .honest{background:#fff8e1;border:1px solid #ffe082;color:#6d4c00;border-radius:10px;padding:10px 14px;font-size:.88rem;margin-bottom:24px}
 .sec{font-size:1.3rem;color:#333;margin:28px 0 12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -227,6 +233,11 @@ tr.wday td{background:#eef2f5 !important;text-align:left;font-size:.84rem;white-
     <div class="tr scroll" style="max-height:300px"><table id="threeDays"></table></div>
     <div class="three-last" id="threeLast"></div>
     <p class="pnote" id="threeNote"></p>
+  </div>
+  <div class="pbox blue" style="margin-bottom:14px">
+    <div class="ptitle">📊 CÁC KIỂU CHƠI KHÁC · tính tiền riêng từng kiểu</div>
+    <p class="pnote" style="margin:0">Mỗi kiểu tính riêng như thể chỉ đánh kiểu đó: 1 vé 10.000đ mỗi kỳ theo số trang gợi ý. Không cộng gộp với nhau, cũng không cộng với Cộng tổng 3 số ở trên.</p>
+    <div class="others" id="others"></div>
   </div>
   <div class="honest" id="honest"></div>
 
@@ -698,6 +709,21 @@ function renderThree(all, nextKy) {
   $("threeNote").innerHTML = `Chọn 3 tổng dễ ra nhất trong 16 tổng: 10 và 11 (mỗi tổng 27/216 = 12,5%) cùng 12 hoặc 9 xen kẽ theo số kỳ (25/216 = 11,6%), cộng lại khoảng ${pct(p)}, cao nhất trong mọi cách chọn 3 tổng. Mình đã thử trên các kỳ thật: chọn theo tổng kỳ trước (Markov), tổng ra nhiều gần đây hay tổng vắng lâu đều trúng thấp hơn (19–35%). ` +
     `Mỗi kỳ đặt ${vnd(THREE_STAKE)}: trúng 1 vé nhận ${vnd(PAY_SUM[10])}–${vnd(PAY_SUM[12])} (lời ${vnd(PAY_SUM[10] - THREE_STAKE)}–${vnd(PAY_SUM[12] - THREE_STAKE)}), trượt mất ${vnd(THREE_STAKE)}. Trung bình nhận lại ${vnd(Math.round(back))} mỗi kỳ (${pct(back / THREE_STAKE)}), tức lỗ khoảng ${vnd(Math.round(THREE_STAKE - back))} mỗi kỳ; chơi càng lâu càng gần mức này.`;
 }
+// One card per bet type except Cộng tổng (it has its own 3-total box): next pick and profit/loss per day
+const OTHER_TYPES = [0, 2, 3, 4]; // indexes in FIXED: Lớn/Hoà/Nhỏ, Chọn 1 số, Hai số trùng, Ba số trùng
+function renderOthers(rows, pr) {
+  const next = picksOf(pr);
+  $("others").innerHTML = OTHER_TYPES.map(i => {
+    const days = {};
+    rows.forEach(r => { const d = days[r.x.date] || (days[r.x.date] = { n: 0, hits: 0, net: 0 }); const won = r.picks[i].pay(r.x.d); d.n++; d.hits += won > 0; d.net += won - STAKE; });
+    const list = Object.keys(days).sort((a, b) => ymd(b).localeCompare(ymd(a)));
+    const tot = list.reduce((a, k) => ({ n: a.n + days[k].n, hits: a.hits + days[k].hits, net: a.net + days[k].net }), { n: 0, hits: 0, net: 0 });
+    const row = (label, d, cls) => `<tr${cls ? ` class="${cls}"` : ""}><td>${label}</td><td>${d.hits}/${d.n} <small>(${pct(d.hits / d.n)})</small></td><td>${money(d.net)}</td></tr>`;
+    return `<div><h4>${FIXED[i].name}</h4><div class="nx">Kỳ tới đánh: <b>${next[i].v}</b> · trúng khoảng ${pct(next[i].p, next[i].p < 0.1 ? 2 : 1)}</div>` +
+      `<table><tr><th>Ngày</th><th>Trúng</th><th>Lời / lỗ</th></tr>` + list.slice(0, 7).map(k => row(k.slice(0, 5).replace("-", "/"), days[k])).join("") +
+      row("Tất cả " + list.length + " ngày", tot, "total") + `</table></div>`;
+  }).join("");
+}
 function renderPrediction(all, nextKy, pr) {
   const last = all[all.length - 1];
   $("nextHead").innerHTML = `Dự đoán kỳ <b>#${nextKy}</b>`;
@@ -1139,9 +1165,7 @@ function renderDays(all, rows) {
   ].map(([v, l]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 
   $("dayStats").innerHTML = `<tr><th>Kiểu chơi</th><th>Số kỳ đoán trúng / tổng số kỳ</th><th>Đoán bừa sẽ trúng</th><th>Tiền đặt</th><th>Tiền thắng</th><th>Lời / lỗ</th></tr>` +
-    FIXED.map((p, i) => `<tr><td>${p.name}</td><td>${hitRate(s.h[i], s.n)}</td><td>${s.n ? pct(s.e[i] / s.n, 2) : "–"}</td><td>${vnd(s.n * STAKE)}</td><td>${vnd(s.w[i])}</td><td>${money(s.w[i] - s.n * STAKE)}</td></tr>`).join("") +
-    `<tr class="total"><td>Cộng tiền nếu đánh cả 5 kiểu</td><td></td><td></td><td>${vnd(s.staked)}</td><td>${vnd(s.won)}</td><td>${money(s.won - s.staked)}</td></tr>`;
-
+    FIXED.map((p, i) => `<tr><td>${p.name}</td><td>${hitRate(s.h[i], s.n)}</td><td>${s.n ? pct(s.e[i] / s.n, 2) : "–"}</td><td>${vnd(s.n * STAKE)}</td><td>${vnd(s.w[i])}</td><td>${money(s.w[i] - s.n * STAKE)}</td></tr>`).join("");
   const vs = (guess, real, ok) => `${guess} → ${real} ${tick(ok)}`;
   $("dayLog").innerHTML = `<tr><th>Kỳ</th><th>Bộ số gợi ý</th><th>Kết quả thực tế</th><th>Lớn/Hoà/Nhỏ<br><small>đoán → ra</small></th><th>Cộng tổng<br><small>đoán → ra</small></th><th>Chọn 1 số</th><th>Hai số trùng</th><th>Ba số trùng</th><th>Lời / lỗ<br><small>5 vé</small></th></tr>` +
     (day.rows.length ? day.rows.slice().reverse().map(r => {
@@ -1190,6 +1214,7 @@ function render() {
     (lastRow ? `<span style="color:#666;font-size:.88rem">Mô hình đã đoán: ${lastRow.picks.slice(0, 3).map(p => `${p.v} ${tick(p.t(last.d))}`).join(" · ")}</span>` : "");
   renderPrediction(all, Math.max(last.ky + 1, inProgress || 0), pr);
   renderThree(all, Math.max(last.ky + 1, inProgress || 0));
+  renderOthers(rows, pr);
   renderBets(pr);
   renderLearn();
   renderWallet();
