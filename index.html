@@ -36,6 +36,15 @@ h1{text-align:center;color:var(--primary);margin:0 0 6px;font-size:2.1rem}
 .bigdice.sm{width:40px;height:40px;font-size:1.3rem;border-width:2px;animation:none}
 @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}
 .pnote{font-size:.82rem;color:#888;margin:10px 0 0}
+.pbox.green{background:linear-gradient(135deg,#f3fbf4 0%,#e3f5e6 100%);border-color:#66bb6a;box-shadow:0 4px 15px rgba(76,175,80,.12);margin-bottom:14px}
+.pbox.green .ptitle{color:#2e7d32}.pbox.green .tag{border-color:#a5d6a7;color:#2e7d32}
+.three-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.three-tiles div{background:#fff;border:1px solid #c8e6c9;border-radius:10px;padding:8px 4px;font-size:.8rem;color:#555}
+.three-tiles b{display:block;font-size:1.1rem;color:#222;margin-top:2px}
+.three-last{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin:8px 0}
+.three-last span{background:#fff;border:1px solid #ddd;border-radius:6px;padding:2px 6px;font-size:.78rem}
+.three-last .w{border-color:#66bb6a;background:#e8f5e9;color:#2e7d32;font-weight:700}
+@media (max-width:600px){.three-tiles{grid-template-columns:repeat(2,1fr)}#threeDays .hm{display:none}#threeDays td,#threeDays th{padding:7px 6px}}
 .honest{background:#fff8e1;border:1px solid #ffe082;color:#6d4c00;border-radius:10px;padding:10px 14px;font-size:.88rem;margin-bottom:24px}
 .sec{font-size:1.3rem;color:#333;margin:28px 0 12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -209,6 +218,15 @@ tr.wday td{background:#eef2f5 !important;text-align:left;font-size:.84rem;white-
       <div class="tags" id="pDiceTags"></div>
       <p class="pnote" id="pDiceNote"></p>
     </div>
+  </div>
+  <div class="pbox green" id="three">
+    <div class="ptitle">🎯 CỘNG TỔNG 3 SỐ · 3 vé × 10.000đ = 30.000đ mỗi kỳ</div>
+    <div class="pbig" id="threePick"></div>
+    <div class="tags" id="threeTags"></div>
+    <div class="three-tiles" id="threeTiles"></div>
+    <div class="tr scroll" style="max-height:300px"><table id="threeDays"></table></div>
+    <div class="three-last" id="threeLast"></div>
+    <p class="pnote" id="threeNote"></p>
   </div>
   <div class="honest" id="honest"></div>
 
@@ -652,6 +670,34 @@ const $ = id => document.getElementById(id);
 
 const tick = ok => ok ? '<span class="won">✓</span>' : '<span class="lost">✗</span>';
 
+// Three totals for a draw: 10 and 11 (12.5% each) plus 12 or 9 in turn (11.6%) = the most likely 3 of the 16 totals
+const THREE_STAKE = 3 * STAKE;
+const threeFor = ky => [10, 11, ky % 2 ? 12 : 9];
+function renderThree(all, nextKy) {
+  const pick = threeFor(nextKy), p = pick.reduce((a, s) => a + PS(s), 0);
+  const back = pick.reduce((a, s) => a + PS(s) * PAY_SUM[s], 0);
+  $("threePick").textContent = pick.join(" · ");
+  $("threeTags").innerHTML = pick.map(s => `<span class="tag">Tổng ${s}: ${pct(PS(s))} · trúng nhận ${vnd(PAY_SUM[s])}</span>`).join("");
+  // Profit/loss if these 3 tickets had been played on every recorded draw
+  const res = all.map(x => { const s = sumD(x.d), win = threeFor(x.ky).includes(s); return { x, s, win, net: (win ? PAY_SUM[s] : 0) - THREE_STAKE }; });
+  const n = res.length, hits = res.filter(r => r.win).length, net = res.reduce((a, r) => a + r.net, 0);
+  let run = 0, maxRun = 0; res.forEach(r => { run = r.win ? 0 : run + 1; maxRun = Math.max(maxRun, run); });
+  const signed = v => (v > 0 ? "+" : "") + vnd(v), color = v => `style="color:${v >= 0 ? "#2e7d32" : "#c62828"}"`;
+  $("threeTiles").innerHTML = [
+    ["Tỉ lệ trúng (lý thuyết)", pct(p)],
+    ["Trúng thật trên " + n.toLocaleString("vi-VN") + " kỳ", pct(hits / n)],
+    ["Lãi/lỗ trung bình mỗi kỳ", `<span ${color(net)}>${signed(Math.round(net / n))}</span>`],
+    ["Thua liền dài nhất · đang thua", maxRun + " · " + run + " kỳ"],
+  ].map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join("");
+  const days = {}; res.forEach(r => { const d = days[r.x.date] || (days[r.x.date] = { n: 0, hits: 0, net: 0 }); d.n++; d.hits += r.win; d.net += r.net; });
+  const list = Object.keys(days).sort((a, b) => ymd(b).localeCompare(ymd(a))).slice(0, 10);
+  $("threeDays").innerHTML = `<tr><th>Ngày</th><th>Số kỳ</th><th>Trúng</th><th class="hm">Tiền đặt</th><th class="hm">Tiền nhận</th><th>Lãi / lỗ</th></tr>` +
+    list.map(k => { const d = days[k]; return `<tr><td>${k.replace(/-/g, "/")}</td><td>${d.n}</td><td>${d.hits} <small>(${pct(d.hits / d.n)})</small></td><td class="hm">${vnd(d.n * THREE_STAKE)}</td><td class="hm">${vnd(d.net + d.n * THREE_STAKE)}</td><td ${color(d.net)}><b>${signed(d.net)}</b></td></tr>`; }).join("") +
+    `<tr class="total"><td>Tất cả</td><td>${n}</td><td>${hits} <small>(${pct(hits / n)})</small></td><td class="hm">${vnd(n * THREE_STAKE)}</td><td class="hm">${vnd(net + n * THREE_STAKE)}</td><td ${color(net)}><b>${signed(net)}</b></td></tr>`;
+  $("threeLast").innerHTML = "<small>20 kỳ gần nhất:</small> " + res.slice(-20).map(r => `<span class="${r.win ? "w" : ""}" title="Kỳ #${r.x.ky}: đánh ${threeFor(r.x.ky).join(", ")}">#${r.x.ky % 1000} ra ${r.s} ${r.win ? "✓ +" + (PAY_SUM[r.s] - THREE_STAKE) / 1000 + "k" : "✗"}</span>`).join("");
+  $("threeNote").innerHTML = `Chọn 3 tổng dễ ra nhất trong 16 tổng: 10 và 11 (mỗi tổng 27/216 = 12,5%) cùng 12 hoặc 9 xen kẽ theo số kỳ (25/216 = 11,6%), cộng lại khoảng ${pct(p)}, cao nhất trong mọi cách chọn 3 tổng. Mình đã thử trên các kỳ thật: chọn theo tổng kỳ trước (Markov), tổng ra nhiều gần đây hay tổng vắng lâu đều trúng thấp hơn (19–35%). ` +
+    `Mỗi kỳ đặt ${vnd(THREE_STAKE)}: trúng 1 vé nhận ${vnd(PAY_SUM[10])}–${vnd(PAY_SUM[12])} (lời ${vnd(PAY_SUM[10] - THREE_STAKE)}–${vnd(PAY_SUM[12] - THREE_STAKE)}), trượt mất ${vnd(THREE_STAKE)}. Trung bình nhận lại ${vnd(Math.round(back))} mỗi kỳ (${pct(back / THREE_STAKE)}), tức lỗ khoảng ${vnd(Math.round(THREE_STAKE - back))} mỗi kỳ; chơi càng lâu càng gần mức này.`;
+}
 function renderPrediction(all, nextKy, pr) {
   const last = all[all.length - 1];
   $("nextHead").innerHTML = `Dự đoán kỳ <b>#${nextKy}</b>`;
@@ -1143,6 +1189,7 @@ function render() {
   $("latest").innerHTML = `<span class="lbl">Kỳ vừa ra #${last.ky}</span>${last.d.map(v => `<span class="bigdice sm">${v}</span>`).join("")}<span class="lbl">Tổng ${s}</span><span class="bt ${CATCLS[ci]}">${CAT[ci]}</span>` +
     (lastRow ? `<span style="color:#666;font-size:.88rem">Mô hình đã đoán: ${lastRow.picks.slice(0, 3).map(p => `${p.v} ${tick(p.t(last.d))}`).join(" · ")}</span>` : "");
   renderPrediction(all, Math.max(last.ky + 1, inProgress || 0), pr);
+  renderThree(all, Math.max(last.ky + 1, inProgress || 0));
   renderBets(pr);
   renderLearn();
   renderWallet();
