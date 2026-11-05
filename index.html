@@ -681,9 +681,9 @@ const $ = id => document.getElementById(id);
 
 const tick = ok => ok ? '<span class="won">✓</span>' : '<span class="lost">✗</span>';
 
-// Three totals for a draw: 10 and 11 (12.5% each) plus 12 or 9 in turn (11.6%) = the most likely 3 of the 16 totals
+// Three different totals for a draw, each drawn from 3–18 with the odds the dice give it
 const THREE_STAKE = 3 * STAKE;
-const threeFor = ky => [10, 11, ky % 2 ? 12 : 9];
+const threeFor = ky => { const out = []; for (let k = 1; out.length < 3; k++) { const t = flexSum(ky + k * 7777777); if (!out.includes(t)) out.push(t); } return out.sort((a, b) => a - b); };
 function renderThree(all, nextKy) {
   const pick = threeFor(nextKy), p = pick.reduce((a, s) => a + PS(s), 0);
   const back = pick.reduce((a, s) => a + PS(s) * PAY_SUM[s], 0);
@@ -695,7 +695,7 @@ function renderThree(all, nextKy) {
   let run = 0, maxRun = 0; res.forEach(r => { run = r.win ? 0 : run + 1; maxRun = Math.max(maxRun, run); });
   const signed = v => (v > 0 ? "+" : "") + vnd(v), color = v => `style="color:${v >= 0 ? "#2e7d32" : "#c62828"}"`;
   $("threeTiles").innerHTML = [
-    ["Tỉ lệ trúng (lý thuyết)", pct(p)],
+    ["Kỳ tới trúng khoảng", pct(p)],
     ["Trúng thật trên " + n.toLocaleString("vi-VN") + " kỳ", pct(hits / n)],
     ["Lãi/lỗ trung bình mỗi kỳ", `<span ${color(net)}>${signed(Math.round(net / n))}</span>`],
     ["Thua liền dài nhất · đang thua", maxRun + " · " + run + " kỳ"],
@@ -706,8 +706,8 @@ function renderThree(all, nextKy) {
     list.map(k => { const d = days[k]; return `<tr><td>${k.replace(/-/g, "/")}</td><td>${d.n}</td><td>${d.hits} <small>(${pct(d.hits / d.n)})</small></td><td class="hm">${vnd(d.n * THREE_STAKE)}</td><td class="hm">${vnd(d.net + d.n * THREE_STAKE)}</td><td ${color(d.net)}><b>${signed(d.net)}</b></td></tr>`; }).join("") +
     `<tr class="total"><td>Tất cả</td><td>${n}</td><td>${hits} <small>(${pct(hits / n)})</small></td><td class="hm">${vnd(n * THREE_STAKE)}</td><td class="hm">${vnd(net + n * THREE_STAKE)}</td><td ${color(net)}><b>${signed(net)}</b></td></tr>`;
   $("threeLast").innerHTML = "<small>20 kỳ gần nhất:</small> " + res.slice(-20).map(r => `<span class="${r.win ? "w" : ""}" title="Kỳ #${r.x.ky}: đánh ${threeFor(r.x.ky).join(", ")}">#${r.x.ky % 1000} ra ${r.s} ${r.win ? "✓ +" + (PAY_SUM[r.s] - THREE_STAKE) / 1000 + "k" : "✗"}</span>`).join("");
-  $("threeNote").innerHTML = `Chọn 3 tổng dễ ra nhất trong 16 tổng: 10 và 11 (mỗi tổng 27/216 = 12,5%) cùng 12 hoặc 9 xen kẽ theo số kỳ (25/216 = 11,6%), cộng lại khoảng ${pct(p)}, cao nhất trong mọi cách chọn 3 tổng. Mình đã thử trên các kỳ thật: chọn theo tổng kỳ trước (Markov), tổng ra nhiều gần đây hay tổng vắng lâu đều trúng thấp hơn (19–35%). ` +
-    `Mỗi kỳ đặt ${vnd(THREE_STAKE)}: trúng 1 vé nhận ${vnd(PAY_SUM[10])}–${vnd(PAY_SUM[12])} (lời ${vnd(PAY_SUM[10] - THREE_STAKE)}–${vnd(PAY_SUM[12] - THREE_STAKE)}), trượt mất ${vnd(THREE_STAKE)}. Trung bình nhận lại ${vnd(Math.round(back))} mỗi kỳ (${pct(back / THREE_STAKE)}), tức lỗ khoảng ${vnd(Math.round(THREE_STAKE - back))} mỗi kỳ; chơi càng lâu càng gần mức này.`;
+  $("threeNote").innerHTML = `Mỗi kỳ trang chọn 3 tổng khác nhau, có thể là bất kỳ tổng nào từ 3 tới 18: tổng dễ ra (9–12) được chọn nhiều hơn, tổng hiếm (3, 4, 17, 18) thỉnh thoảng mới có. Trúng trung bình khoảng 28% (nếu luôn đánh 10, 11 và 12 hoặc 9 thì khoảng 37%), nhưng trúng tổng hiếm thì tiền thưởng cao hơn nhiều. ` +
+    `Kỳ tới đặt ${vnd(THREE_STAKE)}: trúng nhận ${pick.map(t => t + ": " + vnd(PAY_SUM[t])).join(" · ")}, trượt mất ${vnd(THREE_STAKE)}. Trung bình nhận lại ${vnd(Math.round(back))} (${pct(back / THREE_STAKE)}), tức lỗ khoảng ${vnd(Math.round(THREE_STAKE - back))} mỗi kỳ; chơi càng lâu càng gần mức này.`;
 }
 // One card per bet type except Cộng tổng (it has its own 3-total box): next pick and profit/loss per day
 const OTHER_TYPES = [0, 2, 3, 4]; // indexes in FIXED: Lớn/Hoà/Nhỏ, Chọn 1 số, Hai số trùng, Ba số trùng
